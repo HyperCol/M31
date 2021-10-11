@@ -67,5 +67,5 @@ vec3 SpecularLighting(in Gbuffers m, in vec3 L, in vec3 E) {
 
     specular *= mix(m.albedo, vec3(1.0), vec3(hdotl * (1.0 - m.porosity)));
 
-    return specular * 0.0;
+    return specular;
 }
