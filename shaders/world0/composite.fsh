@@ -8,13 +8,21 @@
 #include "/libs/lighting/brdf.glsl"
 #include "/libs/volumetric/atmospheric_common.glsl"
 
+vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L) {
+    //float
+    return vec3(1.0);
+}
+
 vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
     int steps = 6;
     float invsteps = 1.0 / float(steps);
 
     //planet shadow
-    vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), planet_radius);
-    if(min(tracingPlanet.x, tracingPlanet.y) > 0.0) return vec3(0.0);
+    vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0, -1.0, 0.0), planet_radius);
+    float planetShadow = 1.0;
+    if(tracingPlanet.x > 0.0 && tracingPlanet.y > 0.0) {
+        planetShadow = exp(-0.00001 * (tracingPlanet.y - tracingPlanet.x));
+    }
 
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
     if(tracingAtmosphere.y < 0.0) return vec3(1.0);
@@ -31,21 +39,20 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
         float density_mie       = stepLength * exp(-h / mie_distribution);
         float density_ozone     = stepLength * max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
 
-
         opticalDepth += vec3(density_rayleigh, density_mie, density_ozone);
     }
 
     vec3 tau = (rayleigh_scattering + rayleigh_absorption) * opticalDepth.x + (mie_scattering + mie_absorption) * opticalDepth.y + (ozone_absorption + ozone_scattering) * opticalDepth.z;
     vec3 transmittance = exp(-tau);
 
-    return transmittance;
+    return transmittance * planetShadow;
 }
 
 vec3 CalculateAtmosphericScattering(in vec3 rayOrigin, in vec3 rayDirection, in vec3 mainLightDirection, in vec3 secLightDirection, in vec2 tracing) {
     int steps = 16;
     float invsteps = 1.0 / float(steps);
 
-    rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1.0), 0.0);
+    rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1000.0), 0.0);
 
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), planet_radius);
