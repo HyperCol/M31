@@ -26,6 +26,10 @@ float pow5(in float x) {
     return x * x * x * x * x;
 }
 
+float sum3(in vec3 x) {
+    return (x.x + x.y + x.z) / 3.0;
+}
+
 vec3 LinearToGamma(in vec3 color) {
     return pow(color, vec3(2.2));
 }
@@ -96,4 +100,46 @@ float expToLinerDepth(float depth) {
 float linerToExpDepth(float linerDepth) {
     float expDepth = (far + near - 2.0 * far * near / linerDepth) / (near - far);
     return expDepth * 0.5 + 0.5;
+}
+
+float HG(in float m, in float g) {
+  return (0.25 / Pi) * ((1.0 - g*g) / pow(1.0 + g*g - 2.0 * g * m, 1.5));
+}
+
+float IntersectPlane(vec3 origin, vec3 direction, vec3 point, vec3 normal) {
+    return dot(point - origin, normal) / dot(direction, normal);
+}
+
+vec2 RaySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter, float sphereRadius) {
+	rayOrigin -= sphereCenter;
+
+	float a = dot(rayDirection, rayDirection);
+	float b = 2.0 * dot(rayOrigin, rayDirection);
+	float c = dot(rayOrigin, rayOrigin) - (sphereRadius * sphereRadius);
+	float d = b * b - 4.0 * a * c;
+
+	if (d < 0) return vec2(-1.0);
+
+	d = sqrt(d);
+	return vec2(-b - d, -b + d) / (2.0 * a);
+}
+
+vec2 IntersectCube(vec3 rayOrigin, in vec3 rayDirection, in vec3 shapeCenter, in vec3 size) {
+    shapeCenter = rayOrigin - shapeCenter;
+
+    vec3 dr = 1.0 / rayDirection;
+    vec3 n = shapeCenter * dr;
+    vec3 k = size * abs(dr);
+
+    vec3 pin = -k - n;
+    vec3 pout = k - n;
+
+    float near = max(pin.x, max(pin.y, pin.z));
+    float far = min(pout.x, min(pout.y, pout.z));
+
+    if(far > near || far > 0.0) {
+        return vec2(near, far);
+    }else{
+        return vec2(-1.0);
+    }
 }

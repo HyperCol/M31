@@ -24,6 +24,19 @@ float VisibilityTerm(float cosTheta1, float cosTheta2, float roughness){
     return SmithGGX(cosTheta1, roughness) * SmithGGX(cosTheta2, roughness);
 }
 
+vec4 ImportanceSampleGGX(in vec2 E, in float roughness){
+    roughness = clamp(roughness, 1e-5, 1.0 - 1e-5);
+
+    float Phi = E.x * 2.0 * Pi;
+    float CosTheta = sqrt((1 - E.y) / ( 1 + (roughness - 1) * E.y));
+    float SinTheta = sqrt(1 - CosTheta * CosTheta);
+
+    vec3 H = vec3(cos(Phi) * SinTheta, sin(Phi) * SinTheta, CosTheta);
+    float D = DistributionTerm(roughness, abs(CosTheta)) * CosTheta;
+
+    return vec4(H, D);
+}
+
 vec3 DiffuseLighting(in Gbuffers m, in vec3 L, in vec3 E) {
     float ndotv = max(0.0, dot(m.texturedNormal, E));
     float ndotl = max(0.0, dot(m.texturedNormal, L));
@@ -63,7 +76,7 @@ vec3 SpecularLighting(in Gbuffers m, in vec3 L, in vec3 E) {
     float g = VisibilityTerm(ndotl, ndotv, m.roughness);
     float c = 4.0 * ndotv * ndotl + 1e-5; 
 
-    vec3 specular = f * (g * d / c);
+    vec3 specular = f * (g * d / c * ndotl);
 
     specular *= mix(m.albedo, vec3(1.0), vec3(hdotl * (1.0 - m.porosity)));
 
