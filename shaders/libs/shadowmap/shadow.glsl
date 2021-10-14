@@ -49,13 +49,9 @@ vec3 CalculateShading(in vec3 wP) {
     }
 
     float depth = texture(shadowtex0, shadowCoord.xy).x;
-    float penumbra = (shadowCoord.z - blocker) / blocker / 0.2;
-          penumbra *= shadowTexelSize * 32.0 + shadowTexelSize;
+    float penumbra = (shadowCoord.z - blocker) / blocker / Shadow_Depth_Mul * 32.0;
+          penumbra = penumbra * shadowTexelSize + shadowTexelSize;
 
-    /*
-    float penumbra = (shadowCoord.z - blocker) / blocker * 128.0 + 1.0;
-          penumbra *= shadowTexelSize;
-    */
     for(int i = 0; i < steps; i++) {
         float a = (float(i) + dither) * (sqrt(5.0) - 1.0) * Pi;
         float r = pow(float(i + 1) * invsteps, 0.75);
