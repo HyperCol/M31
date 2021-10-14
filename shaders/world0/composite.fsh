@@ -4,14 +4,20 @@
 #include "/libs/uniform.glsl"
 #include "/libs/common.glsl"
 #include "/libs/gbuffers_data.glsl"
-#include "/libs/vertex_data_in.glsl"
+#include "/libs/vertex_data_inout.glsl"
 #include "/libs/lighting/brdf.glsl"
 #include "/libs/volumetric/atmospheric_common.glsl"
+#include "/libs/shadowmap/shadowmap_common.glsl"
 
-vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L) {
-    //float
-    return vec3(1.0);
+float R2Dither(in vec2 coord){
+  float a1 = 1.0 / 0.75487766624669276;
+  float a2 = 1.0 / 0.569840290998;
+
+  return mod(coord.x * a1 + coord.y * a2, 1);
 }
+
+
+#include "/libs/shadowmap/shadow.glsl"
 
 vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
     int steps = 6;
@@ -52,7 +58,7 @@ vec3 CalculateAtmosphericScattering(in vec3 rayOrigin, in vec3 rayDirection, in 
     int steps = 16;
     float invsteps = 1.0 / float(steps);
 
-    rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1000.0), 0.0);
+    rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1.0), 0.0);
 
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), planet_radius);
@@ -99,7 +105,7 @@ vec3 CalculateAtmosphericScattering(in vec3 rayOrigin, in vec3 rayDirection, in 
         transmittance *= attenuation;
     }
 
-    return (r * rayleigh_scattering + m * mie_scattering) * 3.0;
+    return (r * rayleigh_scattering + m * mie_scattering);
 }
 
 void main() {
@@ -111,16 +117,28 @@ void main() {
 
     vec3 color = vec3(0.0);
 
+    vec3 shading = CalculateShading(o.wP);
+
     vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection);
          sunLight += SpecularLighting(m, lightVector, o.eyeDirection);
 
-    color = sunLight;
+    color += sunLight * LightingColor * shading;
+
+    vec3 AmbientLight = vec3(0.0);
+         AmbientLight += m.albedo * SunLightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.8, 0.76) * invPi);
+         AmbientLight += m.albedo * SkyLightingColor * (rescale(dot(m.texturedNormal, upVector), -1.33, 2.0) * invPi);
+         AmbientLight *= (1.0 - m.metal) * (1.0 - m.metallic);
+
+    color += AmbientLight;
 
     if(m.tile_mask == Mask_ID_Sky) {
         color = CalculateAtmosphericScattering(vec3(0.0, planet_radius, 0.0), o.worldViewDirection, worldSunVector, worldMoonVector, vec2(0.0));
     }
 
+    color *= MappingToSDR;
     color = GammaToLinear(color);
+
+    //color = texture(shadowcolor0, texcoord).rgb;
 
     gl_FragData[0] = vec4(color, 1.0);
 }

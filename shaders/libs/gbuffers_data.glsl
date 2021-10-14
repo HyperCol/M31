@@ -96,7 +96,7 @@ Vector GetVector(in vec2 coord, vec2 taa_jitter, sampler2D depthtex) {
     v.depth = texture(depthtex, coord).x;
 
     v.vP = nvec3(gbufferProjectionInverse * nvec4(vec3(coord + taa_jitter, v.depth) * 2.0 - 1.0));
-    v.wP = mat3(gbufferModelViewInverse) * v.vP;
+    v.wP = mat3(gbufferModelViewInverse) * v.vP + gbufferModelViewInverse[3].xyz;
 
     v.viewDirection = normalize(v.vP);
     v.eyeDirection  = -v.viewDirection;

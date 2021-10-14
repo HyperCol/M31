@@ -24,14 +24,14 @@ void main() {
 
     vec2 EncodeNormal = EncodeSpheremap(normal);
 
-    if(albedo.a < Alpha_Test_Reference) discard;
+    //if(albedo.a < Alpha_Test_Reference) discard;
 
     //Misc: emissive heightmap self_shadow solid_block tileMaskID material material_ao
 
     //R : albedo.rg
     //G : albedo.ba
     //B : smoothness, metallic
-    gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(texture3.rg), 1.0);
+    gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(texture3.rg), albedo.a);
 
     //R : light map
     gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(texture3.b, Mask_ID_Land / 255.0), 0.0, 1.0);

@@ -13,5 +13,5 @@
 #define Atmospheric_Ozone_Absorption 1.0
 #define Atmospheric_Shape Sphere    //[Sphere Cube]
 
-#define Sun_Light_Luminance 3.0
+#define Sun_Light_Luminance 8.0
 #define Moon_Light_Luminance 0.3

@@ -39,11 +39,19 @@ vec3 ACESToneMapping(in vec3 color) {
 	return (color * (A * color + B)) / (color * (C * color + D) + E);
 }
 
+vec3 saturation(in vec3 color, in float s) {
+	float lum = dot(color, vec3(0.4, 0.4, 0.2));
+	return max(vec3(0.0), lum + (color - lum) * s);
+}
+
 void main() {
     vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
-
-    color = Uncharted2Tonemap(color);
-    color = ACESToneMapping(color);
+		 color *= MappingToHDR;
+		 
+    color = Uncharted2Tonemap(color * 3.0);
+    //color /= Uncharted2Tonemap(vec3(9.0));
+	color = saturation(color, 1.2);
+    //color = ACESToneMapping(color * 2.0);
 
     color = GammaToLinear(color);
 

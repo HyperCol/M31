@@ -1,3 +1,6 @@
+#define MappingToSDR (1.0 / 3000.0)
+#define MappingToHDR (3000.0)
+
 vec3 nvec3(in vec4 x) {
     return x.xyz / x.w;
 }
@@ -36,6 +39,10 @@ vec3 LinearToGamma(in vec3 color) {
 
 vec3 GammaToLinear(in vec3 color) {
     return pow(color, vec3(1.0 / 2.2));
+}
+
+float rescale(in float v, in float vmin, in float vmax) {
+    return (v - vmin) / (vmax - vmin);
 }
 
 float pack2x8(in vec2 x) {
@@ -142,4 +149,23 @@ vec2 IntersectCube(vec3 rayOrigin, in vec3 rayDirection, in vec3 shapeCenter, in
     }else{
         return vec2(-1.0);
     }
+}
+
+float sdSphere( vec3 p, float s ) {
+  return length(p)-s;
+}
+
+float sdBox( vec3 p, vec3 b ) {
+  vec3 q = abs(p) - b;
+  return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+float sdRoundBox( vec3 p, vec3 b, float r ) {
+  vec3 q = abs(p) - b;
+  return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0) - r;
+}
+
+float sdRoundBox( vec2 p, vec2 b, float r ) {
+  vec2 q = abs(p) - b;
+  return length(max(q,vec2(0.0))) + min(max(q.x,q.y),0.0) - r;
 }
