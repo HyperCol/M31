@@ -15,3 +15,5 @@
 
 #define Sun_Light_Luminance 8.0
 #define Moon_Light_Luminance 0.3
+
+#define Enabled_TAA

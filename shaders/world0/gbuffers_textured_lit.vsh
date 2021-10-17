@@ -21,11 +21,14 @@ out vec4 vcolor;
 out vec4 vertexPosition;
 out vec3 worldPosition;
 
+#include "/libs/setting.glsl"
 #include "/libs/uniform.glsl"
 #include "/libs/common.glsl"
 
 void main() {
     gl_Position = ftransform();
+    ApplyTAAJitter(gl_Position);
+
     vertexPosition = gl_Position;
 
     worldPosition = mat3(gbufferModelViewInverse) * nvec3(gbufferProjectionInverse * gl_Position) + gbufferModelViewInverse[3].xyz;

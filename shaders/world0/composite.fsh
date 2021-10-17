@@ -137,7 +137,7 @@ void main() {
 
     vec3 color = vec3(0.0);
 
-    vec3 shading = CalculateShading(o.wP, lightVector, m.geometryNormal);
+    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal);
 
     vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection);
          sunLight += SpecularLighting(m, lightVector, o.eyeDirection);
@@ -146,7 +146,7 @@ void main() {
 
     vec3 AmbientLight = vec3(0.0);
          AmbientLight += m.albedo * SunLightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
-         AmbientLight += m.albedo * SkyLightingColor * (rescale(dot(m.texturedNormal, upVector), -1.33, 2.0) * invPi);
+         AmbientLight += m.albedo * SkyLightingColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
          AmbientLight *= (1.0 - m.metal) * (1.0 - m.metallic);
 
     color += AmbientLight;
@@ -165,7 +165,10 @@ void main() {
         color += atmosphere_color;
     }
 
-    color *= MappingToSDR;
+    //color *= MappingToSDR;
+    //color = GammaToLinear(color);
+
+    color = color / (color + 1.0);
     color = GammaToLinear(color);
 
     gl_FragData[0] = vec4(color, 1.0);

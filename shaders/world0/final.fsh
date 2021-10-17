@@ -5,6 +5,9 @@ const int colortex0Format = RGBA16;
 const int colortex1Format = RGBA16;
 const int colortex2Format = RGBA16;
 const int colortex3Format = RGBA16;
+const int colortex7Format = RGBA16;
+
+const bool colortex7Clear = false;
 
 const float sunPathRotation = -30.0;
 
@@ -47,8 +50,11 @@ vec3 saturation(in vec3 color, in float s) {
 }
 
 void main() {
-    vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
-		 color *= MappingToHDR;
+    //vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
+	//	 color *= MappingToHDR;
+
+	vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
+		 color = -color / (min(color, vec3(1.0 - 1e-7)) - 1.0);
 		 
     color = Uncharted2Tonemap(color * 4.0);
     //color /= Uncharted2Tonemap(vec3(9.0));

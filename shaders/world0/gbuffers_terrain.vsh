@@ -11,10 +11,12 @@ out vec3 binormal;
 
 out vec4 color;
 
+#include "/libs/setting.glsl"
 #include "/libs/uniform.glsl"
 
 void main() {
     gl_Position = ftransform();
+    ApplyTAAJitter(gl_Position);
 
     color = gl_Color;
 

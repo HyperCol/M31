@@ -1,10 +1,17 @@
-vec3 CalculateShading(in vec3 wP, in vec3 lightDirection, in vec3 normal) {
+vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
     float ndotl = dot(lightDirection, normal);
     if(ndotl < 0.0) return vec3(0.0);
 
     vec3 worldNormal = mat3(gbufferModelViewInverse) * normal;
 
-    vec3 shadowCoord = ConvertToShadowCoord(wP + worldNormal * (1.0 - saturate(ndotl)) * 0.25);
+    vec2 jitter = Jitter[int(mod(float(frameCounter), 16.0))] * 2.0 - 1.0;
+
+    coord.xy -= jitter * texelSize;
+
+    vec3 viewPosition = nvec3(gbufferProjectionInverse * nvec4(vec3(coord.xy, coord.z) * 2.0 - 1.0));
+    vec3 worldPosition = mat3(gbufferModelViewInverse) * viewPosition;
+
+    vec3 shadowCoord = ConvertToShadowCoord(worldPosition + worldNormal * pow5(1.0 - saturate(ndotl)) * 0.25);
     float distortion = ShadowMapDistortion(shadowCoord.xy);
     shadowCoord.xy *= distortion;
     shadowCoord = RemapShadowCoord(shadowCoord);

@@ -41,6 +41,14 @@ vec3 GammaToLinear(in vec3 color) {
     return pow(color, vec3(1.0 / 2.2));
 }
 
+float minComponent( vec3 a ) {
+    return min(a.x, min(a.y, a.z) );
+}
+
+float maxComponent( vec3 a ) {
+    return max(a.x, max(a.y, a.z) );
+}
+
 float rescale(in float v, in float vmin, in float vmax) {
     return (v - vmin) / (vmax - vmin);
 }
