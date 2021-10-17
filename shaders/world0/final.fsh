@@ -16,6 +16,8 @@ const float ambientOcclusionLevel = 0.0;
 
 uniform sampler2D composite;
 
+uniform sampler2D depthtex0;
+
 in vec2 texcoord;
 
 vec3 Uncharted2Tonemap(vec3 x) {
@@ -48,7 +50,7 @@ void main() {
     vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
 		 color *= MappingToHDR;
 		 
-    color = Uncharted2Tonemap(color * 3.0);
+    color = Uncharted2Tonemap(color * 4.0);
     //color /= Uncharted2Tonemap(vec3(9.0));
 	color = saturation(color, 1.2);
     //color = ACESToneMapping(color * 2.0);

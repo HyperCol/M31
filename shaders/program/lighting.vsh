@@ -11,14 +11,14 @@ uniform vec3 sunPosition;
 uniform vec3 moonPosition;
 uniform vec3 shadowLightPosition;
 
-vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint) {
+vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint, float sampleHeight) {
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, L, vec3(0.0), atmosphere_radius);
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, L, vec3(0.0), planet_radius);
     if(tracingAtmosphere.y < 0.0) return vec3(1.0);
 
     float stepLength = tracingAtmosphere.y * samplePoint;
 
-    float h = length(rayOrigin + stepLength * L) - planet_radius;
+    float h = length(rayOrigin + (tracingAtmosphere.y * sampleHeight) * L) - planet_radius;
 
     float density_rayleigh  = stepLength * exp(-h / rayleigh_distribution);
     float density_mie       = stepLength * exp(-h / mie_distribution);
@@ -77,8 +77,8 @@ void main() {
     //make sure samplePosition.y > planet_radius
     vec3 samplePosition = vec3(0.0, planet_radius + 1.0, 0.0);
 
-    SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.1) * Sun_Light_Luminance;
-    MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.1) * Moon_Light_Luminance;
+    SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.5, 0.15) * Sun_Light_Luminance;
+    MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.5, 0.15) * Moon_Light_Luminance;
     LightingColor       = SunLightingColor + MoonLightingColor;
     SkyLightingColor    = max(vec3(0.0), 1.0 - CalculateLocalInScattering(samplePosition, worldUpVector)) * (sum3(SunLightingColor) + sum3(MoonLightingColor));
 }

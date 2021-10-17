@@ -54,7 +54,7 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
     return transmittance * planetShadow;
 }
 
-vec3 CalculateAtmosphericScattering(in vec3 rayOrigin, in vec3 rayDirection, in vec3 mainLightDirection, in vec3 secLightDirection, in vec2 tracing) {
+void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_color, in vec3 rayOrigin, in vec3 rayDirection, in vec3 mainLightDirection, in vec3 secLightDirection, in vec2 tracing) {
     int steps = 16;
     float invsteps = 1.0 / float(steps);
 
@@ -105,7 +105,27 @@ vec3 CalculateAtmosphericScattering(in vec3 rayOrigin, in vec3 rayDirection, in 
         transmittance *= attenuation;
     }
 
-    return (r * rayleigh_scattering + m * mie_scattering);
+    color *= transmittance;
+
+    atmosphere_color = (r * rayleigh_scattering + m * mie_scattering);
+}
+
+vec3 CalculatePlanetSurface(in vec3 LightColor0, in vec3 LightColor1, in vec3 L, in vec3 direction, in float h, in float t) {
+    if(t <= 0.0) return vec3(0.0);
+
+    float cosTheta = dot(L, direction);
+
+    float phaseM0 = HG(cosTheta, 0.76);
+    float phaseM1 = HG(-cosTheta, 0.76);
+
+    float phaseR = (3.0 / 16.0 / Pi) * (1.0 + cosTheta * cosTheta);
+
+    vec3 Tr = exp(-h / rayleigh_distribution) * (rayleigh_absorption + rayleigh_scattering);
+    vec3 Tm = exp(-h / mie_distribution) * (mie_absorption + mie_scattering);
+
+    vec3 transmittance = 1.0 - exp(-sqrt(pow2(t) + pow2(h)) * 3.0 * (Tr + Tm));
+
+    return LightColor0 * (phaseM0 + phaseR) * (transmittance) + LightColor1 * (phaseM1 + phaseR) * (transmittance);
 }
 
 void main() {
@@ -117,7 +137,7 @@ void main() {
 
     vec3 color = vec3(0.0);
 
-    vec3 shading = CalculateShading(o.wP);
+    vec3 shading = CalculateShading(o.wP, lightVector, m.geometryNormal);
 
     vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection);
          sunLight += SpecularLighting(m, lightVector, o.eyeDirection);
@@ -125,20 +145,28 @@ void main() {
     color += sunLight * LightingColor * shading;
 
     vec3 AmbientLight = vec3(0.0);
-         AmbientLight += m.albedo * SunLightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.8, 0.76) * invPi);
+         AmbientLight += m.albedo * SunLightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
          AmbientLight += m.albedo * SkyLightingColor * (rescale(dot(m.texturedNormal, upVector), -1.33, 2.0) * invPi);
          AmbientLight *= (1.0 - m.metal) * (1.0 - m.metallic);
 
     color += AmbientLight;
 
     if(m.tile_mask == Mask_ID_Sky) {
-        color = CalculateAtmosphericScattering(vec3(0.0, planet_radius, 0.0), o.worldViewDirection, worldSunVector, worldMoonVector, vec2(0.0));
+        vec3 rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1.0), 0.0);
+        vec3 rayDirection = o.worldViewDirection;
+
+        vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
+        vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), planet_radius);
+
+        color = CalculatePlanetSurface(SunLightingColor, MoonLightingColor, worldSunVector, o.worldViewDirection, 1000.0, tracingPlanet.x);
+
+        vec3 atmosphere_color = vec3(0.0);
+        CalculateAtmosphericScattering(color, atmosphere_color, vec3(0.0, planet_radius, 0.0), o.worldViewDirection, worldSunVector, worldMoonVector, vec2(0.0));
+        color += atmosphere_color;
     }
 
     color *= MappingToSDR;
     color = GammaToLinear(color);
-
-    //color = texture(shadowcolor0, texcoord).rgb;
 
     gl_FragData[0] = vec4(color, 1.0);
 }
