@@ -4,9 +4,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
 
     vec3 worldNormal = mat3(gbufferModelViewInverse) * normal;
 
-    vec2 jitter = Jitter[int(mod(float(frameCounter), 16.0))] * 2.0 - 1.0;
-
-    coord.xy -= jitter * texelSize;
+    coord.xy = ApplyTAAJitter(coord.xy);
 
     vec3 viewPosition = nvec3(gbufferProjectionInverse * nvec4(vec3(coord.xy, coord.z) * 2.0 - 1.0));
     vec3 worldPosition = mat3(gbufferModelViewInverse) * viewPosition;
@@ -31,8 +29,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
 
     float shading = 0.0;
 
-    float dither = R2Dither(texcoord * vec2(viewWidth, viewHeight));
-    float dither2 = R2Dither((1.0 - texcoord) * vec2(viewWidth, viewHeight));
+    float dither = R2Dither((texcoord - jitter) * vec2(viewWidth, viewHeight));
 
     const float radius = 4.0;
 

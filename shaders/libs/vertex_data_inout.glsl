@@ -20,3 +20,4 @@ io vec3 LightingColor;
 io vec3 SkyLightingColor;
 
 io vec2 texcoord;
+//io vec2 jitter;

@@ -20,6 +20,9 @@ const float invPi = 1.0 / 3.14159265;
 
 uniform int frameCounter;
 
+#if defined(MC_VERSION)
+uniform vec2 jitter;
+#else
 const vec2 R2Jitter[16] = vec2[16](
 vec2(0.2548776662466927, 0.06984029099805333),
 vec2(0.009755332493385449, 0.6396805819961064),
@@ -56,13 +59,20 @@ vec2(0.4375 , 0.81481),
 vec2(0.9375 , 0.25925),
 vec2(0.03125, 0.59259));
 
-#define Jitter R2Jitter
+vec2 jitter = R2Jitter[int(mod(float(frameCounter), 16.0))] * texelSize;
+#endif
+
+vec2 ApplyTAAJitter(in vec2 coord) {
+    #ifdef Enabled_TAA
+    return coord - jitter * 0.5;
+    #else
+    return coord;
+    #endif
+}
 
 void ApplyTAAJitter(inout vec4 coord) {
     #ifdef Enabled_TAA
-    vec2 jitter = R2Jitter[int(mod(float(frameCounter), 16.0))] * 2.0 - 1.0;
-
-    coord.xy += jitter * texelSize * 0.5 * coord.w;
+    coord.xy += jitter * coord.w;
     #endif
 }
 

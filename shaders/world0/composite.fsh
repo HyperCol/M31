@@ -1,10 +1,10 @@
 #version 130
 
 #include "/libs/setting.glsl"
+#include "/libs/vertex_data_inout.glsl"
 #include "/libs/uniform.glsl"
 #include "/libs/common.glsl"
 #include "/libs/gbuffers_data.glsl"
-#include "/libs/vertex_data_inout.glsl"
 #include "/libs/lighting/brdf.glsl"
 #include "/libs/volumetric/atmospheric_common.glsl"
 #include "/libs/shadowmap/shadowmap_common.glsl"
