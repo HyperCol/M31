@@ -16,7 +16,6 @@ float R2Dither(in vec2 coord){
   return mod(coord.x * a1 + coord.y * a2, 1);
 }
 
-
 #include "/libs/shadowmap/shadow.glsl"
 
 vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {

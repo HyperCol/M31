@@ -50,12 +50,25 @@ vec3 saturation(in vec3 color, in float s) {
 }
 
 void main() {
-    //vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
-	//	 color *= MappingToHDR;
+    vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
+		 color *= MappingToHDR;
 
-	vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
-		 color = -color / (min(color, vec3(1.0 - 1e-7)) - 1.0);
-		 
+	vec3 sharpen = vec3(0.0);
+
+	for(float i = -1.0; i <= 1.0; i += 1.0) {
+        for(float j = -1.0; j <= 1.0; j += 1.0) {
+			if(i == 0.0 && j == 0.0) continue;
+			sharpen += LinearToGamma(texture(composite, texcoord + vec2(i, j) * texelSize).rgb) * MappingToHDR;
+		}
+	}
+
+	sharpen = clamp(color - sharpen / 8.0, vec3(-0.125), vec3(0.125));
+	//sharpen = color - sharpen / 8.0;
+
+	color = max(vec3(0.0), color + sharpen * 0.125);
+
+	//if(maxComponent(abs(sharpen)) > 0.05) color = vec3(1.0, 0.0, 0.0);
+
     color = Uncharted2Tonemap(color * 4.0);
     //color /= Uncharted2Tonemap(vec3(9.0));
 	color = saturation(color, 1.2);
