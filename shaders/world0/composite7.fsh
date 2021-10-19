@@ -323,7 +323,7 @@ vec4 ReprojectSampler(in sampler2D tex, in vec2 pixelPos){
     vec2 f2 = f * f;
     vec2 f3 = f * f2;
 
-    float c = 0.5;
+    float c = 0.6 + (TAA_Accumulation_Shapress / 50.0 - 1.0) * 0.2;
     vec2 w0 =         -c  *  f3 + 2.0 * c          *  f2 - c  *  f;
     vec2 w1 =  (2.0 - c)  *  f3 - (3.0 - c)        *  f2            + 1.0;
     vec2 w2 = -(2.0 - c)  *  f3 + (3.0 - 2.0 * c)  *  f2 + c  *  f;
@@ -494,7 +494,7 @@ void main() {
          previousColor = clamp(previousColor, minColor, maxColor);
 
     float blend = 0.95 * InScreen;
-          blend -= min(3.0, velocityLength) * clamp(rescale(sum3(YCoCgToRGB(variance)), 0.05, 0.15), 0.05, 0.25);
+          blend -= min(3.0, velocityLength) * clamp(rescale(sum3(YCoCgToRGB(variance)), 0.05, 0.15), 0.05, 0.125);
 
     vec3 antialiased = mix(color, previousColor, vec3(blend));
          antialiased = YCoCgToRGB(antialiased);

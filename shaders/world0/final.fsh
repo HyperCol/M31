@@ -14,6 +14,7 @@ const float sunPathRotation = -30.0;
 const float ambientOcclusionLevel = 0.0;
 */
 
+#include "/libs/setting.glsl"
 #include "/libs/uniform.glsl"
 #include "/libs/common.glsl"
 
@@ -53,6 +54,7 @@ void main() {
     vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
 		 color *= MappingToHDR;
 
+	#if TAA_Post_Processing_Sharpeness > 0
 	vec3 sharpen = vec3(0.0);
 
 	for(float i = -1.0; i <= 1.0; i += 1.0) {
@@ -62,12 +64,11 @@ void main() {
 		}
 	}
 
-	sharpen = clamp(color - sharpen / 8.0, vec3(-0.125), vec3(0.125));
-	//sharpen = color - sharpen / 8.0;
-
-	color = max(vec3(0.0), color + sharpen * 0.125);
-
+	sharpen = clamp(color - sharpen / 8.0, vec3(-TAA_Post_Processing_Sharpen_Limit), vec3(TAA_Post_Processing_Sharpen_Limit));
 	//if(maxComponent(abs(sharpen)) > 0.05) color = vec3(1.0, 0.0, 0.0);
+
+	color = max(vec3(0.0), color + sharpen * 0.0625 * (TAA_Post_Processing_Sharpeness / 50.0));
+	#endif
 
     color = Uncharted2Tonemap(color * 4.0);
     //color /= Uncharted2Tonemap(vec3(9.0));
