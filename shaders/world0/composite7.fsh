@@ -494,7 +494,7 @@ void main() {
          previousColor = clamp(previousColor, minColor, maxColor);
 
     float blend = 0.95 * InScreen;
-          blend -= min(3.0, velocityLength) * clamp(rescale(sum3(YCoCgToRGB(variance)), 0.05, 0.15), 0.05, 0.125);
+          blend -= step(0.05, velocityLength) * clamp(rescale(sum3(YCoCgToRGB(variance)), 0.05, 0.5), 0.5, 1.0) * 0.1;
 
     vec3 antialiased = mix(color, previousColor, vec3(blend));
          antialiased = YCoCgToRGB(antialiased);

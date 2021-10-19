@@ -34,6 +34,7 @@ struct Gbuffers {
 
     vec2    lightmap;
     float   emissive;
+    float   material_ao;
 
     vec3    texturedNormal;
     vec3    geometryNormal;
@@ -69,7 +70,8 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     m.transmittance = m.scattering + m.absorption;
 
     m.lightmap      = saturate((unpack2x8(tex1.r) * 17.0 - 1.0) / 15.0);
-    m.emissive      = 0.0;
+    m.emissive      = floor(unpack2x8X(tex1.b) * 255.0); m.emissive = m.emissive / 254.0 * step(m.emissive, 254.5);
+    m.material_ao   = 0.0;//unpack2x8Y(tex1.b);
 
     m.texturedNormal    = DecodeSpheremap(tex2.rg);
     m.geometryNormal    = DecodeSpheremap(unpack2x8(tex2.b));

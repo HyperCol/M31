@@ -141,14 +141,21 @@ void main() {
     vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection);
          sunLight += SpecularLighting(m, lightVector, o.eyeDirection);
 
-    color += sunLight * LightingColor * shading;
+    color += sunLight * LightingColor * shading * shadowFade;
 
     vec3 AmbientLight = vec3(0.0);
          AmbientLight += m.albedo * SunLightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
          AmbientLight += m.albedo * SkyLightingColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
-         AmbientLight *= (1.0 - m.metal) * (1.0 - m.metallic);
+         AmbientLight *= pow2(m.lightmap.y) * m.lightmap.y * (1.0 - m.metal) * (1.0 - m.metallic);
 
     color += AmbientLight;
+
+    vec3 blockLight = (BlockLightingColor * m.albedo);
+         blockLight *= (1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0))) * 4.0 * m.lightmap.x * (1.0 - m.metal) * (1.0 - m.metallic) * invPi;
+
+    color += blockLight;
+
+    color += m.emissive * m.albedo;
 
     if(m.tile_mask == Mask_ID_Sky) {
         vec3 rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1.0), 0.0);

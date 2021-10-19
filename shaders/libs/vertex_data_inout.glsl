@@ -14,10 +14,12 @@ io vec3 worldMoonVector;
 io vec3 upVector;
 io vec3 worldUpVector;
 
+io float shadowFade;
+
 io vec3 SunLightingColor;
 io vec3 MoonLightingColor;
 io vec3 LightingColor;
 io vec3 SkyLightingColor;
+io vec3 BlockLightingColor;
 
 io vec2 texcoord;
-//io vec2 jitter;
