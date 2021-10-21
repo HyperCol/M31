@@ -7,7 +7,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
     coord.xy = ApplyTAAJitter(coord.xy);
 
     vec3 viewPosition = nvec3(gbufferProjectionInverse * nvec4(vec3(coord.xy, coord.z) * 2.0 - 1.0));
-    vec3 worldPosition = mat3(gbufferModelViewInverse) * viewPosition;
+    vec3 worldPosition = mat3(gbufferModelViewInverse) * viewPosition + gbufferModelViewInverse[3].xyz;
 
     vec3 shadowCoord = ConvertToShadowCoord(worldPosition + worldNormal * pow5(1.0 - saturate(ndotl)) * 0.25);
     float distortion = ShadowMapDistortion(shadowCoord.xy);
@@ -15,15 +15,10 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
     shadowCoord = RemapShadowCoord(shadowCoord);
     shadowCoord = shadowCoord * 0.5 + 0.5;
 
-    float bias = 8.0 / distortion;
+    float bias = max(1.0, 8.0 / distortion);
           bias = bias * Shadow_Depth_Mul * shadowTexelSize;
 
-    float distortionSize = shadowTexelSize;
-
     shadowCoord.z -= bias;
-
-    //depth += bias;
-    //float shading = step(shadowCoord.z, depth);
 
     float TexelBlurRadius = shadowTexelSize * distortion * 0.125;
 

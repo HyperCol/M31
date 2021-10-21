@@ -31,6 +31,8 @@ void main() {
     vec3 texturedNormal = vec3(normalTexture * 1.0, sqrt(1.0 - dot(normalTexture.xy, normalTexture.xy)));
          texturedNormal = normalize(tbn * normalize(texturedNormal));
 
+    if(maxComponent(texture2.rgb) == 0.0) texturedNormal = normal;
+
     vec2 EncodeNormal = EncodeSpheremap(texturedNormal);
 
     float emissive = textureLod(specular, texcoord, 0).a;
@@ -38,7 +40,6 @@ void main() {
     //if(albedo.a < Alpha_Test_Reference) discard;
 
     //Misc: emissive heightmap self_shadow solid_block material_ao
-
     //R : albedo.rg
     //G : albedo.ba
     //B : smoothness, metallic

@@ -151,7 +151,7 @@ void main() {
     color += AmbientLight;
 
     vec3 blockLight = (BlockLightingColor * m.albedo);
-         blockLight *= (1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0))) * 4.0 * m.lightmap.x * (1.0 - m.metal) * (1.0 - m.metallic) * invPi;
+         blockLight *= (1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0))) * 2.0 * m.lightmap.x * (1.0 - m.metal) * (1.0 - m.metallic) * invPi;
 
     color += blockLight;
 
