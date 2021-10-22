@@ -167,11 +167,11 @@ void main() {
 
     vec3 heldLight1  = BlockLightingColor * SpecularLighting(m, -lP1, o.eyeDirection) * heldLightDistance1;
          heldLight1 += BlockLightingColor * DiffuseLighting(m, -lP1, o.eyeDirection) * max(0.0, rescale(heldLightDistance1, 1e-2, 1.0));
-         heldLight1 *= float(heldBlockLightValue) / 15.0;
+         heldLight1 *= float(heldBlockLightValue) / 15.0 * 3.0;
     
     vec3 heldLight2  = BlockLightingColor * SpecularLighting(m, -lP2, o.eyeDirection) * heldLightDistance2;
          heldLight2 += BlockLightingColor * DiffuseLighting(m, -lP2, o.eyeDirection) * max(0.0, rescale(heldLightDistance2, 1e-2, 1.0));
-         heldLight2 *= float(heldBlockLightValue2) / 15.0;
+         heldLight2 *= float(heldBlockLightValue2) / 15.0 * 3.0;
 
     color += heldLight1 + heldLight2;
     #else
@@ -179,7 +179,7 @@ void main() {
 
     vec3 heldLight  = BlockLightingColor * SpecularLighting(m, o.eyeDirection, o.eyeDirection) * heldLightDistance;
          heldLight += BlockLightingColor * DiffuseLighting(m, o.eyeDirection, o.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-2, 1.0));
-         heldLight *= max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0;
+         heldLight *= max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0 * 3.0;
 
     color += heldLight;
     #endif

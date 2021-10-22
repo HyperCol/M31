@@ -6,8 +6,8 @@
 #define Ultra 3
 //
 #define Sun_Light_Luminance 8.0
-#define Moon_Light_Luminance 0.1
-#define Blocks_Light_Luminance 0.5
+#define Moon_Light_Luminance 0.3
+#define Blocks_Light_Luminance 0.3
 
 #define Held_Light_Quality Medium                   //[Medium High]
 

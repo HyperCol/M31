@@ -80,7 +80,7 @@ void main() {
     SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.5, 0.15) * Sun_Light_Luminance;
     MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.5, 0.15) * Moon_Light_Luminance;
     LightingColor       = SunLightingColor + MoonLightingColor;
-    SkyLightingColor    = max(vec3(0.0), 1.0 - CalculateLocalInScattering(samplePosition, worldUpVector)) * (sum3(SunLightingColor) + sum3(MoonLightingColor));
+    SkyLightingColor    = max(vec3(0.0), 1.0 - CalculateLocalInScattering(samplePosition, worldUpVector)) * mix(1.0, sum3(SunLightingColor) + sum3(MoonLightingColor), 0.9);
     BlockLightingColor  = vec3(1.0, 0.782, 0.344) * Blocks_Light_Luminance;
 
     shadowFade = saturate(rescale(abs(worldSunVector.y), 0.05, 0.1));
