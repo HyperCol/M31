@@ -1,5 +1,5 @@
-#define MappingToSDR (1.0 / 1.0)
-#define MappingToHDR (1.0)
+#define MappingToSDR (1.0 / 3000.0)
+#define MappingToHDR (3000.0)
 
 vec3 nvec3(in vec4 x) {
     return x.xyz / x.w;
