@@ -70,6 +70,11 @@ void main() {
 	color = max(vec3(0.0), color + sharpen * 0.0625 * (TAA_Post_Processing_Sharpeness / 50.0));
 	#endif
 
+	//float exposure = pow(texture(composite, vec2(0.5)).a, 2.2);
+	//	  exposure = -exposure / (min(exposure, vec3(1.0 - 1e-7)) - 1.0);
+
+	//color /= 1.0 / 12.0;
+
     color = Uncharted2Tonemap(color * 4.0);
     //color /= Uncharted2Tonemap(vec3(9.0));
 	color = saturation(color, 1.2);

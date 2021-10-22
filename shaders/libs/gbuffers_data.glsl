@@ -94,12 +94,12 @@ struct Vector {
     vec3 worldEyeDirection;
 };
 
-Vector GetVector(in vec2 coord, vec2 taa_jitter, sampler2D depthtex) {
+Vector GetVector(in vec2 coord, sampler2D depthtex) {
     Vector v;
 
     v.depth = texture(depthtex, coord).x;
 
-    v.vP = nvec3(gbufferProjectionInverse * nvec4(vec3(coord + taa_jitter, v.depth) * 2.0 - 1.0));
+    v.vP = nvec3(gbufferProjectionInverse * nvec4(vec3(ApplyTAAJitter(coord), v.depth) * 2.0 - 1.0));
 
     v.viewLength = length(v.vP);
 

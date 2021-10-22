@@ -12,6 +12,8 @@ uniform float aspectRatio;
 uniform float viewWidth;
 uniform float viewHeight;
 
+uniform float frameTimeCounter;
+
 uniform int frameCounter;
 
 uniform int heldBlockLightValue;

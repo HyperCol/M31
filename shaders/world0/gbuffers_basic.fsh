@@ -18,7 +18,7 @@ in vec4 color;
 void main() {
     vec4 albedo = texture(tex, texcoord) * color;
 
-    vec2 EncodeNormal = EncodeSpheremap(normal);
+    vec2 EncodeNormal = EncodeSpheremap(-normalize(gbufferProjectionInverse[3].xyz));
 
     //Misc: emissive heightmap self_shadow solid_block tileMaskID material material_ao
 

@@ -8,6 +8,7 @@
 #include "/libs/lighting/brdf.glsl"
 #include "/libs/volumetric/atmospheric_common.glsl"
 #include "/libs/shadowmap/shadowmap_common.glsl"
+#include "/libs/misc/night_sky.glsl"
 
 float R2Dither(in vec2 coord){
   float a1 = 1.0 / 0.75487766624669276;
@@ -132,7 +133,7 @@ void main() {
     Gbuffers    m = GetGbuffersData(texcoord);
 
     //opaque
-    Vector      o = GetVector(texcoord, vec2(0.0), depthtex0);
+    Vector      o = GetVector(texcoord, depthtex0);
 
     vec3 color = vec3(0.0);
 
@@ -197,7 +198,14 @@ void main() {
         vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
         vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), planet_radius);
 
-        color = CalculatePlanetSurface(SunLightingColor, MoonLightingColor, worldSunVector, o.worldViewDirection, 1000.0, tracingPlanet.x);
+        color = vec3(0.0);
+
+        vec3 stars = DrawStars(o.worldViewDirection, tracingPlanet.x);
+        color += max(stars / Moon_Light_Luminance - sum3(LightingColor) * 24.0, vec3(0.0)) * Moon_Light_Luminance;
+
+        color += DrawMoon(worldMoonVector, o.worldViewDirection, tracingPlanet.x);
+
+        color += CalculatePlanetSurface(SunLightingColor, MoonLightingColor, worldSunVector, o.worldViewDirection, 1000.0, tracingPlanet.x);
 
         vec3 atmosphere_color = vec3(0.0);
         CalculateAtmosphericScattering(color, atmosphere_color, vec3(0.0, planet_radius, 0.0), o.worldViewDirection, worldSunVector, worldMoonVector, vec2(0.0));

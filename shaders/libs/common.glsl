@@ -1,5 +1,5 @@
-#define MappingToSDR (1.0 / 3000.0)
-#define MappingToHDR (3000.0)
+#define MappingToSDR (1.0 / 1.0)
+#define MappingToHDR (1.0)
 
 vec3 nvec3(in vec4 x) {
     return x.xyz / x.w;
@@ -31,6 +31,10 @@ float pow5(in float x) {
 
 float sum3(in vec3 x) {
     return (x.x + x.y + x.z) / 3.0;
+}
+
+float luminance3(in vec3 color){
+  return dot(color, vec3(0.2126, 0.7152, 0.0722));
 }
 
 vec3 LinearToGamma(in vec3 color) {
@@ -157,6 +161,25 @@ vec2 IntersectCube(vec3 rayOrigin, in vec3 rayDirection, in vec3 shapeCenter, in
     }else{
         return vec2(-1.0);
     }
+}
+
+float hash(in vec2 p) { // replace this by something better
+    p  = 50.0*fract( p*0.3183099 + vec2(0.71,0.113));
+    return -1.0+2.0*fract( p.x*p.y*(p.x+p.y) );
+}
+
+float hash(in vec3 p)  // replace this by something better
+{
+    p  = fract( p*0.3183099+.1 );
+	  p *= 17.0;
+    return fract( p.x*p.y*p.z*(p.x+p.y+p.z) );
+}
+
+vec2 RotateDirection(vec2 V, float angle) {
+    vec2 RotationCosSin = vec2(cos(angle), sin(angle));
+
+    return vec2(V.x*RotationCosSin.x - V.y*RotationCosSin.y,
+                V.x*RotationCosSin.y + V.y*RotationCosSin.x);
 }
 
 float sdSphere( vec3 p, float s ) {

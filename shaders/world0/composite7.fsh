@@ -503,7 +503,13 @@ void main() {
          outputColor = -outputColor / (min(vec3(1e-8), outputColor) - 1.0);
          outputColor *= MappingToSDR;
          outputColor = GammaToLinear(outputColor);
+/*
+    float exposureSample = luminance3(texture(composite, vec2(0.5)).rgb);
+    float exposureSamplePrevious = texture(colortex7, vec2(0.5)).a;
 
+    float blend2 = clamp((frameTimeCounter) / float(frameCounter), 1.0 / 300.0, 0.5);
+    float exposureResult = mix(exposureSample, exposureSamplePrevious, blend2);
+*/
     gl_FragData[0] = vec4(outputColor, 1.0);
     gl_FragData[1] = vec4(antialiased, 1.0);
 }
