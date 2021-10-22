@@ -150,8 +150,41 @@ void main() {
 
     color += AmbientLight;
 
+    #if Held_Light_Quality == High
+
+    vec3 handOffset = nvec3(gbufferProjectionInverse * nvec4(vec3(1.0, 0.5, 0.0) * 2.0 - 1.0)) * vec3(1.0, 1.0, 0.0);
+    if(m.tile_mask == Mask_ID_Hand) handOffset = vec3(0.0);
+
+    vec3 lP1 = o.vP - handOffset * 4.0;
+    vec3 lP2 = o.vP + handOffset * 4.0;
+
+    float heldLightDistance1 = 1.0 / pow2(length(lP1));
+    float heldLightDistance2 = 1.0 / pow2(length(lP2)); 
+
+    lP1 = normalize(lP1);
+    lP2 = normalize(lP2);
+
+    vec3 heldLight1  = BlockLightingColor * SpecularLighting(m, -lP1, o.eyeDirection) * heldLightDistance1;
+         heldLight1 += BlockLightingColor * DiffuseLighting(m, -lP1, o.eyeDirection) * max(0.0, rescale(heldLightDistance1, 1e-2, 1.0));
+         heldLight1 *= float(heldBlockLightValue) / 15.0;
+    
+    vec3 heldLight2  = BlockLightingColor * SpecularLighting(m, -lP2, o.eyeDirection) * heldLightDistance2;
+         heldLight2 += BlockLightingColor * DiffuseLighting(m, -lP2, o.eyeDirection) * max(0.0, rescale(heldLightDistance2, 1e-2, 1.0));
+         heldLight2 *= float(heldBlockLightValue2) / 15.0;
+
+    color += heldLight1 + heldLight2;
+    #else
+    float heldLightDistance = 1.0 / pow2(o.viewLength);
+
+    vec3 heldLight  = BlockLightingColor * SpecularLighting(m, o.eyeDirection, o.eyeDirection) * heldLightDistance;
+         heldLight += BlockLightingColor * DiffuseLighting(m, o.eyeDirection, o.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-2, 1.0));
+         heldLight *= max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0;
+
+    color += heldLight;
+    #endif
+
     vec3 blockLight = (BlockLightingColor * m.albedo);
-         blockLight *= (1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0))) * 2.0 * m.lightmap.x * (1.0 - m.metal) * (1.0 - m.metallic) * invPi;
+         blockLight *= (1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0)) + pow2(m.lightmap.x)) * m.lightmap.x * (1.0 - m.metal) * (1.0 - m.metallic) * invPi;
 
     color += blockLight;
 

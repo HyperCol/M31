@@ -12,13 +12,16 @@ uniform float aspectRatio;
 uniform float viewWidth;
 uniform float viewHeight;
 
+uniform int frameCounter;
+
+uniform int heldBlockLightValue;
+uniform int heldBlockLightValue2;
+
 vec2 resolution = vec2(viewWidth, viewHeight);
 vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
 const float Pi = 3.14159265;
 const float invPi = 1.0 / 3.14159265;
-
-uniform int frameCounter;
 
 #if defined(MC_VERSION)
 uniform vec2 jitter;
