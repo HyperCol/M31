@@ -70,13 +70,15 @@ void main() {
 	color = max(vec3(0.0), color + sharpen * 0.0625 * (TAA_Post_Processing_Sharpeness / 50.0));
 	#endif
 
-	float exposure = pow(texture(composite, vec2(0.5)).a, 0.7);
+	#ifdef Average_Exposure
+	float exposure = pow(texture(composite, vec2(0.5)).a, 2.2);
+          exposure = -exposure / (exposure - 1.0);
+		  exposure = pow(exposure, 0.7);
 		  exposure = 1.0 - exp(-MappingToHDR * exposure / 400.0);
 
 	color *= 0.5;
 	color /= max(exposure, 1.0 / 128.0);
-
-	//color /= 1.0 / 32.0;
+	#endif
 
     color = Uncharted2Tonemap(color * 4.0);
     //color /= Uncharted2Tonemap(vec3(9.0));

@@ -507,14 +507,17 @@ void main() {
          outputColor = GammaToLinear(outputColor);
 
     vec3 centerSample = textureLod(composite, vec2(0.5), viewHeight).rgb;
-         centerSample = LinearToGamma(centerSample);
-         centerSample = -centerSample / (centerSample - 1.0);
 
-    float exposureSample = luminance3(centerSample);
-    float exposureSamplePrevious = texture(colortex7, vec2(0.5)).a; if(exposureSamplePrevious < 1e-5) exposureSamplePrevious = exposureSample;
+    float exposureCurrent = luminance3(centerSample);
+    float exposurePrevious = texture(colortex7, vec2(0.5)).a; if(exposurePrevious < 1e-5) exposurePrevious = exposureCurrent;
 
-    float blend2 = clamp((frameTimeCounter + (1.0 / 60.0)) / float(1 + frameCounter) * 2.0, 1.0 / 300.0, 0.5);
-    float exposureResult = mix(exposureSample, exposureSamplePrevious, 1.0 - blend2);
+    #if Average_Exposure_PerFrame_Weight == Auto
+    float weight = (frameTimeCounter + 1.0) / float(frameCounter + 45);
+    #else
+    float weight = 1.0 / Average_Exposure_PerFrame_Weight;
+    #endif
+
+    float exposureResult = mix(exposurePrevious, exposureCurrent, weight);
 
     gl_FragData[0] = vec4(outputColor, exposureResult);
     gl_FragData[1] = vec4(antialiased, exposureResult);
