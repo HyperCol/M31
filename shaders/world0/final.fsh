@@ -19,6 +19,7 @@ const float ambientOcclusionLevel = 0.0;
 #include "/libs/common.glsl"
 
 uniform sampler2D composite;
+uniform sampler2D gnormal;
 
 uniform sampler2D depthtex0;
 
@@ -50,6 +51,52 @@ vec3 saturation(in vec3 color, in float s) {
 	return max(vec3(0.0), lum + (color - lum) * s);
 }
 
+vec4 cubic(float v){
+    vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - v;
+    vec4 s = n * n * n;
+    float x = s.x;
+    float y = s.y - 4.0 * s.x;
+    float z = s.z - 4.0 * s.y + 6.0 * s.x;
+    float w = 6.0 - x - y - z;
+    return vec4(x, y, z, w) * (1.0/6.0);
+}
+
+vec3 textureBicubic(sampler2D sampler, vec2 texCoords){
+    texCoords = texCoords * resolution - 0.5;
+
+    vec2 fxy = fract(texCoords);
+    texCoords -= fxy;
+
+    vec4 xcubic = cubic(fxy.x);
+    vec4 ycubic = cubic(fxy.y);
+
+    vec4 c = texCoords.xxyy + vec2 (-0.5, +1.5).xyxy;
+
+    vec4 s = vec4(xcubic.xz + xcubic.yw, ycubic.xz + ycubic.yw);
+    vec4 offset = c + vec4 (xcubic.yw, ycubic.yw) / s;
+
+    offset *= texelSize.xxyy;
+
+    vec3 sample0 = texture(sampler, offset.xz).rgb;
+    vec3 sample1 = texture(sampler, offset.yz).rgb;
+    vec3 sample2 = texture(sampler, offset.xw).rgb;
+    vec3 sample3 = texture(sampler, offset.yw).rgb;
+
+    float sx = s.x / (s.x + s.y);
+    float sy = s.z / (s.z + s.w);
+
+    return mix(mix(sample3, sample2, sx), mix(sample1, sample0, sx), sy);
+}
+
+vec4 GetBloomSample(in vec2 coord, inout vec2 offset, in float level) {
+	vec3 color = LinearToGamma(textureBicubic(gnormal, texcoord / level + offset).rgb);
+	float weight = log2(level);//exp(-pow2(log2(level)) / 2.56);
+
+	offset.x += 1.0 / level + texelSize.x * level * 2.0;
+	
+	return vec4(color * weight, weight);
+}
+
 void main() {
     vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
 		 color *= MappingToHDR;
@@ -69,6 +116,20 @@ void main() {
 
 	color = max(vec3(0.0), color + sharpen * 0.0625 * (TAA_Post_Processing_Sharpeness / 50.0));
 	#endif
+
+	vec4 bloom = vec4(0.0);
+	float total = 0.0;
+
+	vec2 offset = texelSize * 4.0;
+	bloom += GetBloomSample(texcoord, offset, 8.0);
+	bloom += GetBloomSample(texcoord, offset, 12.0);
+	bloom += GetBloomSample(texcoord, offset, 16.0);
+	bloom += GetBloomSample(texcoord, offset, 24.0);
+	bloom += GetBloomSample(texcoord, offset, 32.0);
+
+	bloom.rgb *= MappingToHDR / bloom.a;
+
+	color = mix(color, bloom.rgb, 0.125);
 
 	#ifdef Average_Exposure
 	float exposure = pow(texture(composite, vec2(0.5)).a, 2.2);
