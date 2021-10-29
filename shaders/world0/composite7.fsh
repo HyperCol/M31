@@ -6,9 +6,9 @@ uniform sampler2D colortex7;
 uniform sampler2D depthtex0;
 
 in vec2 texcoord;
-
+/*
 const bool compositeMipmapEnabled = true;
-
+*/
 #include "/libs/setting.glsl"
 #include "/libs/uniform.glsl"
 #include "/libs/common.glsl"
@@ -224,7 +224,9 @@ void main() {
          outputColor *= MappingToSDR;
          outputColor = GammaToLinear(outputColor);
 
-    vec3 centerSample = textureLod(composite, vec2(0.5), viewHeight).rgb;
+    //outputColor = vec3(saturate(step(0.99, hash(floor(texcoord * resolution * 0.125)))));
+
+    vec3 centerSample = textureLod(composite, vec2(0.5), log2(viewHeight)).rgb;
 
     float exposureCurrent = luminance3(centerSample);
     float exposurePrevious = texture(colortex7, vec2(0.5)).a; if(exposurePrevious < 1e-5) exposurePrevious = exposureCurrent;
@@ -234,8 +236,8 @@ void main() {
     float update = round(counter);
 
     #if Average_Exposure_PerFrame_Weight == Auto
-    //float weight = (frameTimeCounter + 1.0) / float(frameCounter + 45);
-    float weight = saturate(counter - mod(frameTimeCounter * updateRate * 0.25, 1));
+    float weight = (frameTimeCounter + 1.0) / float(frameCounter + 45);
+    //float weight = saturate(counter - mod(frameTimeCounter * updateRate * 0.25, 1));
     #else
     float weight = 1.0 / Average_Exposure_PerFrame_Weight;
     #endif

@@ -15,6 +15,7 @@ io vec3 upVector;
 io vec3 worldUpVector;
 
 io float shadowFade;
+io float starsFade;
 
 io vec3 SunLightingColor;
 io vec3 MoonLightingColor;

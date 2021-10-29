@@ -6,9 +6,10 @@
 #define Ultra 3
 #define Auto 7
 //
-#define Sun_Light_Luminance 8.0
-#define Moon_Light_Luminance 0.3
-#define Blocks_Light_Luminance 0.3
+#define Sun_Light_Luminance 12.0
+#define Moon_Light_Luminance 0.1
+#define Blocks_Light_Luminance 0.1
+#define NoLight_Luminance 0.1
 
 #define Held_Light_Quality Medium                   //[Medium High]
 
@@ -24,6 +25,8 @@
 #define Moon_Radius 1.0                             //[0.5 0.75 1.0 1.5 2.0]
 #define Moon_Distance 1.0                           //[0.5 0.75 1.0 1.5 2.0]
 
+#define Stars_Fade_In 0.1                           //[0.01 0.05 0.1 0.15 0.2]
+#define Stars_Fade_Out 0.0                          //[-1.0 -0.25 -0.2 -0.15 -0.1 -0.05 0.0]
 #define Stars_Visible 0.005                         //[0.00062 0.00125 0.0025 0.005 0.01 0.02 0.04]
 #define Stars_Luminance 0.1                         //[0.025 0.05 0.1 0.2 0.4]
 #define Stars_Speed 1.0                             //[0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]

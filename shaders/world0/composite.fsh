@@ -185,7 +185,7 @@ void main() {
     #endif
 
     vec3 blockLight = (BlockLightingColor * m.albedo);
-         blockLight *= (1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0)) + pow2(m.lightmap.x)) * m.lightmap.x * (1.0 - m.metal) * (1.0 - m.metallic) * invPi;
+         blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (pow2(m.lightmap.x) + 1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0)));
 
     color += blockLight;
 
@@ -201,7 +201,8 @@ void main() {
         color = vec3(0.0);
 
         vec3 stars = DrawStars(o.worldViewDirection, tracingPlanet.x);
-        color += max(stars / Moon_Light_Luminance - sum3(LightingColor) * 24.0, vec3(0.0)) * Moon_Light_Luminance;
+        //color += max(stars / Moon_Light_Luminance - sum3(LightingColor) * 24.0, vec3(0.0)) * Moon_Light_Luminance;
+        color += starsFade * stars;
 
         color += DrawMoon(worldMoonVector, o.worldViewDirection, tracingPlanet.x);
 

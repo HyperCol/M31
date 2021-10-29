@@ -33,6 +33,10 @@ float sum3(in vec3 x) {
     return (x.x + x.y + x.z) / 3.0;
 }
 
+float sum4(in vec4 x) {
+    return (x.x + x.y + x.z + x.w) * 0.25;
+}
+
 float luminance3(in vec3 color){
   return dot(color, vec3(0.2126, 0.7152, 0.0722));
 }
