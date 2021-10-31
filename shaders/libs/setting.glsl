@@ -5,7 +5,11 @@
 #define High 2
 #define Ultra 3
 #define Auto 7
+
+#define Motion_Blur 0
+#define Shutter_Time 1
 //
+
 #define Sun_Light_Luminance 12.0
 #define Moon_Light_Luminance 0.1
 #define Blocks_Light_Luminance 0.1
@@ -38,6 +42,9 @@
 
 #define Camera_ISO 100
 #define Camera_Exposure_Value 0.0
+#define Camera_Shutter_Speed 0                      //[0 1 2 4 8 16 32 64 128 256]
+#define Camera_Shutter_Mode Motion_Blur             //[Motion_Blur Shutter_Time]
+#define Camera_FPS 120.0                            //[25.0 30.0 45.0 60.0 90.0 120.0 144.0 240.0]
 
 #define Average_Exposure                            //
 #define Average_Exposure_PerFrame_Weight Auto       //[Auto 25 30 45 60 90 120 144 240 340]

@@ -147,6 +147,10 @@ void main() {
 	color *= 1.0 / (exp2(ev6 - Camera_Exposure_Value));
 	color *= Camera_ISO;
 
+	#if Camera_Shutter_Speed > 0 && Camera_Shutter_Mode == Shutter_Time
+	color *= 1.0 + min(1.0 - 1.0 / Camera_FPS, float(Camera_Shutter_Speed) / Camera_FPS);
+	#endif
+
     color = Uncharted2Tonemap(color * 2.0);
     ////color /= Uncharted2Tonemap(vec3(9.0));
 	color = saturation(color, 1.2);
