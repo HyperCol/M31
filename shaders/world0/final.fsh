@@ -90,7 +90,7 @@ vec3 textureBicubic(sampler2D sampler, vec2 texCoords){
 
 vec4 GetBloomSample(in vec2 coord, inout vec2 offset, in float level) {
 	vec3 color = LinearToGamma(textureBicubic(gnormal, texcoord / level + offset).rgb);
-	float weight = log2(level);//exp(-pow2(log2(level)) / 2.56);
+	float weight = exp(-pow2(log2(level)) / 25.6);
 
 	offset.x += 1.0 / level + texelSize.x * level * 2.0;
 	
@@ -129,22 +129,28 @@ void main() {
 
 	bloom.rgb *= MappingToHDR / bloom.a;
 
-	color = mix(color, bloom.rgb, 0.125);
+	color = mix(color, bloom.rgb, 0.05);
+
+	const float K = 12.5;
 
 	#ifdef Average_Exposure
 	float exposure = pow(texture(composite, vec2(0.5)).a, 2.2);
           exposure = -exposure / (exposure - 1.0);
-		  exposure = pow(exposure, 0.7);
-		  exposure = 1.0 - exp(-MappingToHDR * exposure / 400.0);
+		  exposure = exposure * MappingToHDR;
+		  exposure = pow(exposure, 1.0 / 2.2) * 50.0;
+	#else
+	float exposure = 800.0;
+	#endif 
 
-	color *= 0.5;
-	color /= max(exposure, 1.0 / 128.0);
-	#endif
+	float ev6 = log2(800.0 / K);
 
-    color = Uncharted2Tonemap(color * 4.0);
-    //color /= Uncharted2Tonemap(vec3(9.0));
+	color *= 1.0 / (exp2(ev6 - Camera_Exposure_Value));
+	color *= Camera_ISO;
+
+    color = Uncharted2Tonemap(color * 2.0);
+    ////color /= Uncharted2Tonemap(vec3(9.0));
 	color = saturation(color, 1.2);
-    //color = ACESToneMapping(color * 2.0);
+    //color = ACESToneMapping(color);
 
     color = GammaToLinear(color);
 

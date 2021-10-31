@@ -36,6 +36,9 @@
 #define Polaris_Offset_X 4.0                        //[1.0 2.0 3.0 4.0 5.0 6.0 7.0]
 #define Polaris_Offset_Y 4.0                        //[1.0 2.0 3.0 4.0 5.0 6.0 7.0]
 
+#define Camera_ISO 100
+#define Camera_Exposure_Value 0.0
+
 #define Average_Exposure                            //
 #define Average_Exposure_PerFrame_Weight Auto       //[Auto 25 30 45 60 90 120 144 240 340]
 
