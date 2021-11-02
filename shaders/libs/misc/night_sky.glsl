@@ -7,8 +7,8 @@ uniform sampler2D depthtex2;
 
 uniform int moonPhase;
 
-vec3 DrawMoon(in vec3 L, vec3 direction, float hit_planet) {
-    if(hit_planet > 0.0) return vec3(0.0);
+vec4 DrawMoon(in vec3 L, vec3 direction, float hit_planet) {
+    if(hit_planet > 0.0) return vec4(0.0);
 
     vec2 traceingMoon = RaySphereIntersection(vec3(0.0) - L * (moon_distance * Moon_Distance + moon_radius * Moon_Radius), direction, vec3(0.0), moon_radius * Moon_Radius);
     vec2 traceingMoon2 = RaySphereIntersection(vec3(0.0) - L * (moon_distance * Moon_Distance + moon_radius * Moon_Radius), L, vec3(0.0), moon_radius * Moon_Radius);
@@ -30,7 +30,9 @@ vec3 DrawMoon(in vec3 L, vec3 direction, float hit_planet) {
     vec4 moon_texture = texture(depthtex2, coord + chosePhase); moon_texture.rgb = LinearToGamma(moon_texture.rgb);
     float hit_moon = float(abs(coord2.x - 0.5) < 0.5 && abs(coord2.y - 0.5) < 0.5 && coord3.z > 0.0);
 
-    return moon_texture.rgb * (hit_moon * Moon_Light_Luminance * moon_texture.a * Moon_Texture_Luminance);    
+    if(abs(coord2.x - 0.5) >= 0.5 || abs(coord2.y - 0.5) >= 0.5 || coord3.z < 0.0) return vec4(0.0);
+
+    return vec4(moon_texture.rgb * (Moon_Light_Luminance * Moon_Texture_Luminance), moon_texture.a);
 }
 
 vec3 DrawStars(in vec3 direction, float hit_planet) {
@@ -55,8 +57,8 @@ vec3 DrawStars(in vec3 direction, float hit_planet) {
                   n.y > max(n.x, n.z) ? direction.zxy : 
                   direction;
 
-    float stars = saturate(rescale(hash(floor(coord3.xy / coord3.z * 256.0)), (1.0 - Stars_Visible), 1.0));
-          stars += float(floor(coord3.xy / coord3.z * 256.0 / Polaris_Size - vec2(Polaris_Offset_X, Polaris_Offset_Y)) == vec2(0.0)) * Polaris_Luminance * float(n.y > max(n.x, n.z) && coord3.y > 0.0);
+    float stars = saturate(rescale(hash(floor(coord3.xy / coord3.z * 256.0)), (1.0 - Stars_Visible), 1.0)) * Stars_Luminance;
+          stars += float(round(coord3.xy / coord3.z * 256.0 / Polaris_Size - vec2(Polaris_Offset_X, Polaris_Offset_Y)) == vec2(0.0)) * Polaris_Luminance * float(n.y > max(n.x, n.z) && coord3.y > 0.0);
 
     return vec3(stars);
 }

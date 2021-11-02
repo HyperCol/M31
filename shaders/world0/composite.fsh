@@ -166,30 +166,30 @@ void main() {
     lP2 = normalize(lP2);
 
     vec3 heldLight1  = BlockLightingColor * SpecularLighting(m, -lP1, o.eyeDirection) * heldLightDistance1;
-         heldLight1 += BlockLightingColor * DiffuseLighting(m, -lP1, o.eyeDirection) * max(0.0, rescale(heldLightDistance1, 1e-2, 1.0));
-         heldLight1 *= float(heldBlockLightValue) / 15.0 * 3.0;
+         heldLight1 += BlockLightingColor * DiffuseLighting(m, -lP1, o.eyeDirection) * max(0.0, rescale(heldLightDistance1, 1e-3, 1.0));
+         heldLight1 *= float(heldBlockLightValue) / 15.0;
     
     vec3 heldLight2  = BlockLightingColor * SpecularLighting(m, -lP2, o.eyeDirection) * heldLightDistance2;
-         heldLight2 += BlockLightingColor * DiffuseLighting(m, -lP2, o.eyeDirection) * max(0.0, rescale(heldLightDistance2, 1e-2, 1.0));
-         heldLight2 *= float(heldBlockLightValue2) / 15.0 * 3.0;
+         heldLight2 += BlockLightingColor * DiffuseLighting(m, -lP2, o.eyeDirection) * max(0.0, rescale(heldLightDistance2, 1e-3, 1.0)) * 6.0;
+         heldLight2 *= float(heldBlockLightValue2) / 15.0;
 
     color += heldLight1 + heldLight2;
     #else
     float heldLightDistance = 1.0 / pow2(o.viewLength);
 
     vec3 heldLight  = BlockLightingColor * SpecularLighting(m, o.eyeDirection, o.eyeDirection) * heldLightDistance;
-         heldLight += BlockLightingColor * DiffuseLighting(m, o.eyeDirection, o.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-2, 1.0));
-         heldLight *= max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0 * 3.0;
+         heldLight += BlockLightingColor * DiffuseLighting(m, o.eyeDirection, o.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-3, 1.0)) * 6.0;
+         heldLight *= max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0;
 
     color += heldLight;
     #endif
 
     vec3 blockLight = (BlockLightingColor * m.albedo);
-         blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (pow2(m.lightmap.x) + 1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0)));
+         blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (pow2(m.lightmap.x) + 1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0))) * (1.0 - m.metallic) * (1.0 - m.metal);
 
-    color += blockLight;
+    //color += blockLight;
 
-    color += m.emissive * m.albedo;
+    color += m.emissive * m.albedo * (1.0 - SchlickFresnel(dot(o.eyeDirection, normalize(o.eyeDirection + normalize(reflect(o.viewDirection, m.geometryNormal))))));
 
     if(m.tile_mask == Mask_ID_Sky) {
         vec3 rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1.0), 0.0);
@@ -201,10 +201,10 @@ void main() {
         color = vec3(0.0);
 
         vec3 stars = DrawStars(o.worldViewDirection, tracingPlanet.x);
-        //color += max(stars / Moon_Light_Luminance - sum3(LightingColor) * 24.0, vec3(0.0)) * Moon_Light_Luminance;
         color += starsFade * stars;
 
-        color += DrawMoon(worldMoonVector, o.worldViewDirection, tracingPlanet.x);
+        vec4 moonTexture = DrawMoon(worldMoonVector, o.worldViewDirection, tracingPlanet.x);
+        color = mix(color, moonTexture.rgb, vec3(moonTexture.a));
 
         color += CalculatePlanetSurface(SunLightingColor, MoonLightingColor, worldSunVector, o.worldViewDirection, 1000.0, tracingPlanet.x);
 
