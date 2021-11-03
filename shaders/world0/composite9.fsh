@@ -15,7 +15,7 @@ void main() {
     vec3 color = vec3(0.0);
     float total = 0.0;
 
-    vec2 coord = texcoord + vec2(0.5) * texelSize;
+    vec2 coord = texcoord;
 
     for(float i = -2.0; i <= 2.0; i += 1.0) {
         for(float j = -2.0; j <= 2.0; j += 1.0) {

@@ -90,7 +90,7 @@ vec3 textureBicubic(sampler2D sampler, vec2 texCoords){
 
 vec4 GetBloomSample(in vec2 coord, inout vec2 offset, in float level) {
 	vec3 color = LinearToGamma(textureBicubic(gnormal, texcoord / level + offset).rgb);
-	float weight = exp(-pow2(log2(level)) / 25.6);
+	float weight = exp(-pow2(log2(level)) / 6.4);
 
 	offset.x += 1.0 / level + texelSize.x * level * 2.0;
 	
@@ -120,16 +120,23 @@ void main() {
 	vec4 bloom = vec4(0.0);
 	float total = 0.0;
 
-	vec2 offset = texelSize * 4.0;
+	vec2 offset = texelSize * 4.0 + texelSize * 0.5;
+	
 	bloom += GetBloomSample(texcoord, offset, 8.0);
 	bloom += GetBloomSample(texcoord, offset, 12.0);
 	bloom += GetBloomSample(texcoord, offset, 16.0);
 	bloom += GetBloomSample(texcoord, offset, 24.0);
-	bloom += GetBloomSample(texcoord, offset, 32.0);
+	//bloom += GetBloomSample(texcoord, offset, 32.0);
 
-	bloom.rgb *= MappingToHDR / bloom.a;
+	bloom.rgb += color * MappingToSDR;
+	bloom.a += exp(-1e-3 / 6.4);
+	bloom.rgb *= MappingToHDR / bloom.a * max(1.0, Bloom_Intensity);
 
-	color = (color + bloom.rgb * Bloom_Intensity) / (1.0 + min(1.0, Bloom_Intensity));
+	#ifdef Bloom_Intensity_Test
+		color = vec3(sum3(color));
+	#endif
+
+	color = mix(color, bloom.rgb, min(1.0, Bloom_Intensity));
 
 	const float K = 12.5;
 

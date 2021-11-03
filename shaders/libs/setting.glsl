@@ -53,7 +53,8 @@
 #define Camera_FPS 45.0                             //[25.0 30.0 45.0 60.0 90.0 120.0 144.0 240.0]
 #define Camera_Shutter_Speed 0                      //[0 10 20 30 40 50 60 70 80 90 100 150 200 300 400]
 
-#define Bloom_Intensity 0.05                        //[0.05 0.1 0.5 1.0 5.0 10.0 20.0]
+#define Bloom_Intensity 0.2                         //[0.05 0.1 0.2 0.4 0.6 0.8 1.0 2.0 4.0 8.0 16.0]
+    //#define Bloom_Intensity_Test                    //
 
 //Antialiasing
 #define Enabled_TAA

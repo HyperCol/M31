@@ -141,7 +141,7 @@ void main() {
     float update = round(counter);
 
     //float weight = (frameTimeCounter + 1.0) / float(frameCounter + 45);
-    float weight = saturate((counter - mod(frameTimeCounter * 0.5, Camera_Exposure_Delay)) / Camera_Exposure_Delay);
+    float weight = saturate((counter - mod(frameTimeCounter * 0.25, Camera_Exposure_Delay)) / Camera_Exposure_Delay);
 
     float exposureResult = mix(exposurePrevious, exposureCurrent, weight);
 
@@ -164,7 +164,11 @@ void main() {
     vec3 previousColor = RGBToYCoCg(ReprojectSampler(colortex7, previousCoord).rgb);
 
     float blend = 0.95 * InScreen;
-          blend -= step(0.05, velocityLength) * clamp(rescale(sum3(YCoCgToRGB(variance)), 0.05, 0.5), 0.5, 1.0) * 0.05;
+
+    vec3 v = YCoCgToRGB(variance);
+    blend -= 0.1 * step(0.05, velocityLength) * saturate(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.5, 1.0));
+
+    //blend -= step(0.05, velocityLength) * clamp(rescale(sum3(YCoCgToRGB(variance)), 0.05, 0.5), 0.5, 1.0) * 0.1;
 
     vec3 accumulation = clipToAABB(previousColor, minColor, maxColor);
          accumulation = mix(color, accumulation, vec3(blend));
@@ -180,6 +184,10 @@ void main() {
     //result
     vec3 outputColor = LinearToGamma(accumulation);
     outputColor = -outputColor / (min(vec3(1e-8), outputColor) - 1.0);
+
+    //vec3 v = YCoCgToRGB(variance);
+    //outputColor = vec3(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.9, 1.0));
+
     outputColor *= MappingToSDR;
     outputColor = GammaToLinear(outputColor);
 
