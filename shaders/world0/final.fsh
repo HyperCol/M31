@@ -129,11 +129,11 @@ void main() {
 
 	bloom.rgb *= MappingToHDR / bloom.a;
 
-	color = mix(color, bloom.rgb, 0.05);
+	color = (color + bloom.rgb * Bloom_Intensity) / (1.0 + min(1.0, Bloom_Intensity));
 
 	const float K = 12.5;
 
-	#ifdef Average_Exposure
+	#ifdef Camera_Average_Exposure
 	float exposure = pow(texture(composite, vec2(0.5)).a, 2.2);
           exposure = -exposure / (exposure - 1.0);
 		  exposure = exposure * MappingToHDR;
@@ -142,14 +142,11 @@ void main() {
 	float exposure = 800.0;
 	#endif 
 
-	float ev6 = log2(800.0 / K);
+	float ev = log2(exposure / K) - Camera_Exposure_Value;
+		  ev = clamp(ev, Camera_Exposure_Min_EV, Camera_Exposure_Max_EV);
 
-	color *= 1.0 / (exp2(ev6 - Camera_Exposure_Value));
+	color *= 1.0 / (exp2(ev));
 	color *= Camera_ISO;
-
-	#if Camera_Shutter_Speed > 0 && Camera_Shutter_Mode == Shutter_Time
-	color *= 1.0 + min(1.0 - 1.0 / Camera_FPS, float(Camera_Shutter_Speed) / Camera_FPS);
-	#endif
 
     color = Uncharted2Tonemap(color * 2.0);
     ////color /= Uncharted2Tonemap(vec3(9.0));

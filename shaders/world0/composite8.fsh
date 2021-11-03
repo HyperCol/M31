@@ -49,7 +49,7 @@ vec3 CalculateBloomSample(in float level, in vec2 offset) {
 
     if(abs(coord.x - 0.5) >= 0.5 || abs(coord.y - 0.5) >= 0.5) return vec3(0.0);
 
-    //coord += texelSize * 0.5 * log2(level);
+    coord += texelSize * 0.5 * log2(level);
 
     float total = 0.0;
 
@@ -58,7 +58,11 @@ vec3 CalculateBloomSample(in float level, in vec2 offset) {
             vec2 position = vec2(i, j);
 
             float weight = exp(-pow2(length(position)) / 2.56);
-            color += texture(composite, coord + position * texelSize * level).rgb * weight;
+
+            vec3 colorSample = texture(composite, coord + position * texelSize * level).rgb;
+                 colorSample = max(floor(colorSample * 65535.0) - 255.0, vec3(0.0)) / (65535.0 - 255.0);
+
+            color += colorSample * weight;
             total += weight;
         }   
     }
