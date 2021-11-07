@@ -12,7 +12,7 @@ in vec2 texcoord;
 #include "/libs/common.glsl"
 
 void main() {
-    if(max(texcoord.x, texcoord.y) > 0.5) {
+    if(texcoord.y > 0.5) {
         gl_FragData[0] = vec4(0.0);
     }else{
 
@@ -27,7 +27,7 @@ void main() {
 
             float weight = exp(-pow2(length(position)) / 2.56);
 
-            color += LinearToGamma(texture(gnormal, coord + position * texelSize).rgb) * weight;
+            color += LinearToGamma(texture(gnormal, coord * 0.5 + position * texelSize).rgb) * weight;
             total += weight;
         }
     }

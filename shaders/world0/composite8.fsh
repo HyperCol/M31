@@ -42,10 +42,12 @@ vec4 GatherB(in sampler2D tex, in vec2 coord, vec2 offset) {
                 );
 }
 
-vec3 CalculateBloomSample(in float level, in vec2 offset) {
+vec3 CalculateBloomSample(in float level, inout vec2 offset) {
     vec3 color = vec3(0.0);
 
     vec2 coord = (texcoord - offset) * level;
+
+    offset.x += 1.0 / level + texelSize.x * level * 2.0;
 
     if(abs(coord.x - 0.5) >= 0.5 || abs(coord.y - 0.5) >= 0.5) return vec3(0.0);
 
@@ -53,11 +55,11 @@ vec3 CalculateBloomSample(in float level, in vec2 offset) {
 
     float total = 0.0;
 
-    for(float i = -1.0; i <= 1.0; i += 1.0) {
-        for(float j = -1.0; j <= 1.0; j += 1.0) {
+    for(float i = -1.0; i <= 0.0; i += 1.0) {
+        for(float j = -1.0; j <= 0.0; j += 1.0) {
             vec2 position = vec2(i, j);
 
-            float weight = exp(-pow2(length(position)) / 2.56);
+            float weight = 1.0;//exp(-pow2(length(position)) / 2.56);
 
             vec3 colorSample = texture(composite, coord + position * texelSize * level).rgb;
 
@@ -76,15 +78,10 @@ void main() {
 
     vec2 offset = texelSize * 4.0;
 
+    bloom += CalculateBloomSample(4.0, offset);
     bloom += CalculateBloomSample(8.0, offset);
-    offset.x += 1.0 / 8.0 + texelSize.x * 8.0 * 2.0;
     bloom += CalculateBloomSample(12.0, offset);
-    offset.x += 1.0 / 12.0 + texelSize.x * 12.0 * 2.0;
     bloom += CalculateBloomSample(16.0, offset);
-    offset.x += 1.0 / 16.0 + texelSize.x * 16.0 * 2.0;
-    bloom += CalculateBloomSample(24.0, offset);
-    offset.x += 1.0 / 24.0 + texelSize.x * 24.0 * 2.0;
-    //bloom += CalculateBloomSample(32.0, offset);
     
     gl_FragData[0] = vec4(bloom, 1.0);
 }
