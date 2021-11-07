@@ -100,8 +100,8 @@ vec4 GetBloomSample(in vec2 coord, inout vec2 offset, in float level) {
 void main() {
     vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
 		 color *= MappingToHDR;
-
-	#if TAA_Post_Processing_Sharpeness > 0
+	
+	#if TAA_Post_Processing_Sharpeness > 0 && defined(Enabled_TAA)
 	vec3 sharpen = vec3(0.0);
 
 	for(float i = -1.0; i <= 1.0; i += 1.0) {
@@ -128,8 +128,10 @@ void main() {
 	bloom += GetBloomSample(texcoord, offset, 24.0);
 	//bloom += GetBloomSample(texcoord, offset, 32.0);
 
-	bloom.rgb += color * MappingToSDR;
-	bloom.a += exp(-1e-3 / 6.4);
+	float weight0 = exp(-1e-5 / 6.4);
+
+	bloom.rgb += color * MappingToSDR * weight0;
+	bloom.a += weight0;
 	bloom.rgb *= MappingToHDR / bloom.a * max(1.0, Bloom_Intensity);
 
 	#ifdef Bloom_Intensity_Test

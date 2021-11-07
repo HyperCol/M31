@@ -12,6 +12,10 @@ in vec2 texcoord;
 #include "/libs/common.glsl"
 
 void main() {
+    if(max(texcoord.x, texcoord.y) > 0.5) {
+        gl_FragData[0] = vec4(0.0);
+    }else{
+
     vec3 color = vec3(0.0);
     float total = 0.0;
 
@@ -32,5 +36,6 @@ void main() {
     color = GammaToLinear(color);
 
     gl_FragData[0] = vec4(color, 1.0);
+    }
 }
 /* DRAWBUFFERS:2 */

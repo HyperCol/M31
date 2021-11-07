@@ -25,6 +25,16 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 const float Pi = 3.14159265;
 const float invPi = 1.0 / 3.14159265;
 
+float ExpToLinerDepth(float depth) {
+    vec2 viewDepth = mat2(gbufferProjectionInverse[2].zw, gbufferProjectionInverse[3].zw) * vec2(depth * 2.0 - 1.0, 1.0);
+    return -viewDepth.x / viewDepth.y;
+}
+
+float LinerToExpDepth(float linerDepth) {
+    float expDepth = (far + near - 2.0 * far * near / linerDepth) / (near - far);
+    return expDepth * 0.5 + 0.5;
+}
+
 #if defined(MC_VERSION)
 uniform vec2 jitter;
 #else
@@ -73,6 +83,14 @@ vec2 ApplyTAAJitter(in vec2 coord) {
     #else
     return coord;
     #endif
+}
+
+vec2 RemovalTAAJitter(in vec2 coord) {
+    #ifdef Enabled_TAA
+    return coord + jitter * 0.5;
+    #else
+    return coord;
+    #endif   
 }
 
 void ApplyTAAJitter(inout vec4 coord) {

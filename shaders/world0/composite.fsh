@@ -187,7 +187,7 @@ void main() {
     vec3 blockLight = (BlockLightingColor * m.albedo);
          blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (pow2(m.lightmap.x) + 1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0))) * (1.0 - m.metallic) * (1.0 - m.metal);
 
-    //color += blockLight;
+    color += blockLight;
 
     color += m.emissive * m.albedo * (1.0 - SchlickFresnel(dot(o.eyeDirection, normalize(o.eyeDirection + normalize(reflect(o.viewDirection, m.geometryNormal))))));
 
@@ -219,6 +219,12 @@ void main() {
     color = color / (color + 1.0);
     color = GammaToLinear(color);
 
-    gl_FragData[0] = vec4(color, 1.0);
+    float P = ExpToLinerDepth(texture(depthtex0, vec2(0.5)).x);
+	float z = ExpToLinerDepth(texture(depthtex0, texcoord).x);
+
+    float CoC = Camera_Aperture * ((Camera_Focal_Length * (z - P)) / (z * (P - Camera_Focal_Length)));
+          CoC = min(32.0, CoC) / 32.0;
+
+    gl_FragData[0] = vec4(color, CoC);
 }
 /* DRAWBUFFERS:3 */

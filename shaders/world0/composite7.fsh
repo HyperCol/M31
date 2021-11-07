@@ -29,24 +29,28 @@ vec3 YCoCgToRGB(vec3 c) {
 	// B = Y - Co - Cg
 
     return vec3(c.x + c.y - c.z,
-             c.x + c.z,
-	         c.x - c.y - c.z);
+                c.x + c.z,
+	            c.x - c.y - c.z);
 }
 
-vec3 clipToAABB(vec3 color, vec3 minimum, vec3 maximum) {
-    #ifndef TAA_No_Clip
-    vec3 p_clip = 0.5 * (maximum + minimum);
-    vec3 e_clip = 0.5 * (maximum - minimum);
+vec3 GetClosest(in vec2 coord) {
+    vec3 closest = vec3(0.0, 0.0, 1.0);
 
-    vec3 v_clip = color - p_clip;
-    vec3 v_unit = v_clip.xyz / e_clip;
-    vec3 a_unit = abs(v_unit);
-    float ma_unit = max(a_unit.x, max(a_unit.y, a_unit.z));
+    for(float i = -1.0; i <= 1.0; i += 1.0) {
+        for(float j = -1.0; j <= 1.0; j += 1.0) {
+            float depth = texture(depthtex0, coord + vec2(i, j) * texelSize).x;
 
-    if (ma_unit > 1.0) return p_clip + v_clip / ma_unit;
-    #endif
-    
-    return color;// point inside aabb
+            if(depth < closest.z) {
+                closest = vec3(i, j, depth);
+            }
+        }
+    }
+
+    closest.xy = closest.xy * texelSize + ApplyTAAJitter(coord);
+
+    //return vec3(coord, texture(depthtex0, coord).x);
+
+    return closest;
 }
 
 vec4 ReprojectSampler(in sampler2D tex, in vec2 pixelPos){
@@ -59,7 +63,7 @@ vec4 ReprojectSampler(in sampler2D tex, in vec2 pixelPos){
     vec2 f2 = f * f;
     vec2 f3 = f * f2;
 
-    float c = 0.6 + (TAA_Accumulation_Shapress / 50.0 - 1.0) * 0.2;
+    float c = 0.5;
     vec2 w0 =         -c  *  f3 + 2.0 * c          *  f2 - c  *  f;
     vec2 w1 =  (2.0 - c)  *  f3 - (3.0 - c)        *  f2            + 1.0;
     vec2 w2 = -(2.0 - c)  *  f3 + (3.0 - 2.0 * c)  *  f2 + c  *  f;
@@ -82,6 +86,22 @@ vec4 ReprojectSampler(in sampler2D tex, in vec2 pixelPos){
     return result;
 }
 
+vec3 clipToAABB(vec3 color, vec3 minimum, vec3 maximum) {
+    #ifndef TAA_No_Clip
+    vec3 p_clip = 0.5 * (maximum + minimum);
+    vec3 e_clip = 0.5 * (maximum - minimum);
+
+    vec3 v_clip = color - p_clip;
+    vec3 v_unit = v_clip.xyz / e_clip;
+    vec3 a_unit = abs(v_unit);
+    float ma_unit = max(a_unit.x, max(a_unit.y, a_unit.z));
+
+    if (ma_unit > 1.0) return p_clip + v_clip / ma_unit;
+    #endif
+    
+    return color;// point inside aabb
+}
+
 vec3 GetVariance(in vec2 coord, out vec3 minColor, out vec3 maxColor) {
     vec3 m1 = vec3(0.0);
     vec3 m2 = vec3(0.0);
@@ -98,7 +118,7 @@ vec3 GetVariance(in vec2 coord, out vec3 minColor, out vec3 maxColor) {
     m1 /= 9.0;
     m2 /= 9.0;
 
-    vec3 variance = sqrt(abs(m1 * m1 - m2));
+    vec3 variance = sqrt(abs(m2 - m1 * m1));
 
     const float sigma = 2.0;
 
@@ -106,24 +126,6 @@ vec3 GetVariance(in vec2 coord, out vec3 minColor, out vec3 maxColor) {
     maxColor = m1 + variance * sigma;
 
     return variance;
-}
-
-vec3 GetClosest(in vec2 coord) {
-    vec3 closest = vec3(0.0, 0.0, 1.0);
-
-    for(float i = -1.0; i <= 1.0; i += 1.0) {
-        for(float j = -1.0; j <= 1.0; j += 1.0) {
-            float depth = texture(depthtex0, coord + vec2(i, j) * texelSize).x;
-
-            if(depth < closest.z) {
-                closest = vec3(i, j, depth);
-            }
-        }
-    }
-
-    closest.xy = closest.xy * texelSize + coord;
-
-    return closest;
 }
 
 void main() {
@@ -146,14 +148,13 @@ void main() {
     float exposureResult = mix(exposurePrevious, exposureCurrent, weight);
 
     //taa
-    vec3 color = RGBToYCoCg(textureLod(composite, texcoord, 0).rgb);
+    vec3 currentColor = RGBToYCoCg(textureLod(composite, texcoord, 0).rgb);
 
     vec3 maxColor = vec3( 1.0);
     vec3 minColor = vec3(-1.0);
     vec3 variance = GetVariance(texcoord, minColor, maxColor);
 
     vec3 closest = GetClosest(texcoord);
-    //vec3 closest = vec3(texcoord, texture(depthtex0, texcoord).x);
     vec2 velocity = GetVelocity(closest);
     if(closest.z < 0.7) velocity *= 0.001;
     float velocityLength = length(velocity * resolution);
@@ -163,15 +164,17 @@ void main() {
 
     vec3 previousColor = RGBToYCoCg(ReprojectSampler(colortex7, previousCoord).rgb);
 
-    float blend = 0.95 * InScreen;
+    float blend = 0.987 * InScreen;
 
     vec3 v = YCoCgToRGB(variance);
-    blend -= 0.1 * step(0.05, velocityLength) * saturate(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.5, 1.0));
-
-    //blend -= step(0.05, velocityLength) * clamp(rescale(sum3(YCoCgToRGB(variance)), 0.05, 0.5), 0.5, 1.0) * 0.1;
+    blend -= step(0.05, velocityLength) * 0.1 * saturate(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.5, 1.0));
 
     vec3 accumulation = clipToAABB(previousColor, minColor, maxColor);
-         accumulation = mix(color, accumulation, vec3(blend));
+         accumulation = mix(currentColor, accumulation, vec3(blend));
+
+    #ifndef Enabled_TAA
+    accumulation = currentColor;
+    #endif
 
     #if Camera_Shutter_Speed > 0
     float shutter = (1.0 - 4.0 / (Camera_FPS)) * (Camera_Shutter_Speed / 100.0);
@@ -182,16 +185,12 @@ void main() {
     accumulation = YCoCgToRGB(accumulation);
 
     //result
-    vec3 outputColor = LinearToGamma(accumulation);
-    outputColor = -outputColor / (min(vec3(1e-8), outputColor) - 1.0);
+    vec3 color = LinearToGamma(accumulation);
+    color = -color / (min(vec3(1e-8), color) - 1.0);
+    color *= MappingToSDR;
+    color = GammaToLinear(color);
 
-    //vec3 v = YCoCgToRGB(variance);
-    //outputColor = vec3(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.9, 1.0));
-
-    outputColor *= MappingToSDR;
-    outputColor = GammaToLinear(outputColor);
-
-    gl_FragData[0] = vec4(outputColor, exposureResult);
+    gl_FragData[0] = vec4(color, exposureResult);
     gl_FragData[1] = vec4(accumulation, exposureResult);
 }
 /* DRAWBUFFERS:37 */

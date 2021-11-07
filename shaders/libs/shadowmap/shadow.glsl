@@ -24,7 +24,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
 
     float shading = 0.0;
 
-    float dither = R2Dither((texcoord - jitter) * vec2(viewWidth, viewHeight));
+    float dither = R2Dither(ApplyTAAJitter(texcoord) * vec2(viewWidth, viewHeight));
 
     const float radius = 4.0;
 
@@ -32,8 +32,10 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
     float invsteps = 1.0 / float(steps);
 
     float blocker = 0.0;
-    float blocker2 = 0.0;
     int blockerCount = 0;
+
+    float blocker2 = 0.0;
+    int blocker2Count = 0;
 
     for(int i = 0; i < steps; i++) {
         float a = (float(i) + dither) * (sqrt(5.0) - 1.0) * Pi;
@@ -43,17 +45,13 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
         float depth = texture(shadowtex0, shadowCoord.xy + offset).x;
 
         if(depth < shadowCoord.z) {
-            blocker2 += depth * depth;
             blocker += depth;
             blockerCount++;
         }
-
-        //shading += step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy + offset).x);
     }
 
     if(blockerCount > 0) {
         blocker /= float(blockerCount);
-        blocker2 /= float(blockerCount);
     }else{
         return vec3(1.0);
     }
@@ -71,10 +69,6 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
     }
 
     shading *= invsteps;
-
-    //float variance = blocker - blocker2;
-
-    //shading = 1.0 - saturate(100.0 * variance / (variance + pow(shadowCoord.z - blocker, 2.0)));
 
     return vec3(shading);
 }
