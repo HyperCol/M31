@@ -128,35 +128,39 @@ vec3 CalculatePlanetSurface(in vec3 LightColor0, in vec3 LightColor1, in vec3 L,
     return LightColor0 * (phaseM0 + phaseR) * (transmittance) + LightColor1 * (phaseM1 + phaseR) * (transmittance);
 }
 
-float Falloff(in float DistanceSquare) {
-    // 1 scalar mad instruction
-    return DistanceSquare * DistanceSquare * -pow2(1.0) + 1.0;
-}
-
 float ComputeAO(in vec3 P, in vec3 N, in vec3 S) {
     vec3 V = S - P;
     float vodtv = dot(V, V);
     float ndotv = dot(N, V) * inversesqrt(vodtv);
 
-    float falloff = vodtv * -pow2(1.0) + 1.0;
+    float falloff = vodtv * -pow2(0.7071) + 1.0;
 
     // Use saturate(x) instead of max(x,0.f) because that is faster
     return saturate(ndotv - 0.0) * saturate(falloff);
 }
 
 float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
-    float ao = 1.0;
+    int steps = 8;
+    float invsteps = 1.0 / float(steps);
+
+    int rounds = 4;
 
     if(m.tile_mask == Mask_ID_Hand) return 1.0;
 
-    float radius = 64.0 / v.viewLength;
+    float ao = 1.0;
 
-    for(int j = 1; j <= 4; j++){
-        for(int i = 0; i < 4; i++) {
-            float a = (float(i) + 0.5) / 8.0 * 2.0 * Pi;
+    float dither = 0.5;//R2Dither(ApplyTAAJitter(texcoord) * resolution);
+
+    float radius = 128.0 / v.viewLength;
+
+    for(int j = 0; j < rounds; j++){
+        for(int i = 0; i < steps; i++) {
+            float a = (float(i) + dither) * invsteps * 2.0 * Pi;
             vec2 offset = vec2(cos(a), sin(a)) * texelSize * (float(j + 1) * radius);
 
             vec2 offsetCoord = coord + offset;
+            //if(abs(offsetCoord.x - 0.5) >= 0.5 || abs(offsetCoord.y - 0.5) >= 0.5) break;
+
             float offsetDepth = texture(depthtex0, offsetCoord).x;
 
             vec3 S = nvec3(gbufferProjectionInverse * nvec4(vec3(ApplyTAAJitter(offsetCoord), offsetDepth) * 2.0 - 1.0));
@@ -165,7 +169,7 @@ float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
         }
     }
 
-    return 1.0 - ao / 24.0;
+    return 1.0 - ao / (float(rounds) * float(steps));
 }
 
 void main() {
@@ -185,12 +189,14 @@ void main() {
     color += sunLight * LightingColor * shading * shadowFade;
 
     float ao = ScreenSpaceAmbientOcclusion(texcoord, m, o);
-          //ao = saturate(rescale(ao, 0.9, 1.0));
+
+    float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y), pow2(0.9), 1.0));
+    float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 8.0, 1.0));
 
     vec3 AmbientLight = vec3(0.0);
          AmbientLight += m.albedo * SunLightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
          AmbientLight += m.albedo * SkyLightingColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
-         AmbientLight *= mix(pow2(m.lightmap.y) * m.lightmap.y * saturate(rescale(ao, 0.33, 1.0)), saturate(rescale(ao * m.lightmap.y, 0.9, 1.0)), 0.125) * (1.0 - m.metal) * (1.0 - m.metallic);
+         AmbientLight *= mix(SkyLighting0, SkyLighting1, 0.8) * (1.0 - m.metal) * (1.0 - m.metallic);
 
     color += AmbientLight;
 
