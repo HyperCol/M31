@@ -51,7 +51,7 @@ vec3 CalculateBloomSample(in float level, inout vec2 offset) {
 
     if(abs(coord.x - 0.5) >= 0.5 || abs(coord.y - 0.5) >= 0.5) return vec3(0.0);
 
-    //coord -= texelSize * 0.5 * (level);
+    //coord += texelSize * 0.5 * (level);
 
     float total = 0.0;
 

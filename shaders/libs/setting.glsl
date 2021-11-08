@@ -7,10 +7,10 @@
 #define Ultra 3
 
 //Lighting Setting
-#define Sun_Light_Luminance 4.0
-#define Moon_Light_Luminance 0.1
+#define Sun_Light_Luminance 2.0
+#define Moon_Light_Luminance 0.03
 #define Blocks_Light_Luminance 0.1
-#define Nature_Light_Min_Luminance 0.1
+#define Nature_Light_Min_Luminance 0.05
 #define No_Nature_Light_Luminance 0.0
 
 #define Held_Light_Quality Medium                   //[Medium High]
@@ -61,7 +61,7 @@
 #define Camera_Shutter_Speed 0                      //[0 10 20 30 40 50 60 70 80 90 100 150 200 300 400]
 
 //#define Bloom_Intensity 0.2                         //[0.05 0.1 0.2 0.4 0.6 0.8 1.0 2.0 4.0 8.0 16.0]
-#define Bloom_Exposure_Value -2.0                     //[-3.0 -2.5 -2.0 -1.5 -1.0]
+#define Bloom_Exposure_Value -3.0                     //[-5.0 -4.5 -4.0 -3.5 -3.0 -2.5 -2.0 -1.5 -1.0]
     //#define Bloom_Intensity_Test                    //
 
 //Antialiasing
