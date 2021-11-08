@@ -128,6 +128,46 @@ vec3 CalculatePlanetSurface(in vec3 LightColor0, in vec3 LightColor1, in vec3 L,
     return LightColor0 * (phaseM0 + phaseR) * (transmittance) + LightColor1 * (phaseM1 + phaseR) * (transmittance);
 }
 
+float Falloff(in float DistanceSquare) {
+    // 1 scalar mad instruction
+    return DistanceSquare * DistanceSquare * -pow2(1.0) + 1.0;
+}
+
+float ComputeAO(in vec3 P, in vec3 N, in vec3 S) {
+    vec3 V = S - P;
+    float vodtv = dot(V, V);
+    float ndotv = dot(N, V) * inversesqrt(vodtv);
+
+    float falloff = vodtv * -pow2(1.0) + 1.0;
+
+    // Use saturate(x) instead of max(x,0.f) because that is faster
+    return saturate(ndotv - 0.0) * saturate(falloff);
+}
+
+float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
+    float ao = 1.0;
+
+    if(m.tile_mask == Mask_ID_Hand) return 1.0;
+
+    float radius = 64.0 / v.viewLength;
+
+    for(int j = 1; j <= 4; j++){
+        for(int i = 0; i < 4; i++) {
+            float a = (float(i) + 0.5) / 8.0 * 2.0 * Pi;
+            vec2 offset = vec2(cos(a), sin(a)) * texelSize * (float(j + 1) * radius);
+
+            vec2 offsetCoord = coord + offset;
+            float offsetDepth = texture(depthtex0, offsetCoord).x;
+
+            vec3 S = nvec3(gbufferProjectionInverse * nvec4(vec3(ApplyTAAJitter(offsetCoord), offsetDepth) * 2.0 - 1.0));
+
+            ao += ComputeAO(v.vP, m.texturedNormal, S);
+        }
+    }
+
+    return 1.0 - ao / 24.0;
+}
+
 void main() {
     //material
     Gbuffers    m = GetGbuffersData(texcoord);
@@ -144,10 +184,13 @@ void main() {
 
     color += sunLight * LightingColor * shading * shadowFade;
 
+    float ao = ScreenSpaceAmbientOcclusion(texcoord, m, o);
+          //ao = saturate(rescale(ao, 0.9, 1.0));
+
     vec3 AmbientLight = vec3(0.0);
          AmbientLight += m.albedo * SunLightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
          AmbientLight += m.albedo * SkyLightingColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
-         AmbientLight *= pow2(m.lightmap.y) * m.lightmap.y * (1.0 - m.metal) * (1.0 - m.metallic);
+         AmbientLight *= mix(pow2(m.lightmap.y) * m.lightmap.y * saturate(rescale(ao, 0.33, 1.0)), saturate(rescale(ao * m.lightmap.y, 0.9, 1.0)), 0.125) * (1.0 - m.metal) * (1.0 - m.metallic);
 
     color += AmbientLight;
 
@@ -185,11 +228,14 @@ void main() {
     #endif
 
     vec3 blockLight = (BlockLightingColor * m.albedo);
-         blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (pow2(m.lightmap.x) + 1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0))) * (1.0 - m.metallic) * (1.0 - m.metal);
+         blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (pow2(m.lightmap.x) + 1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0))) * (1.0 - m.metallic) * (1.0 - m.metal) * (1.0 - m.emissive);
 
     color += blockLight;
 
-    color += m.emissive * m.albedo * (1.0 - SchlickFresnel(dot(o.eyeDirection, normalize(o.eyeDirection + normalize(reflect(o.viewDirection, m.geometryNormal))))));
+    vec3 emissiveColor = m.albedo;
+         emissiveColor *= invPi * m.emissive * (1.0 - SchlickFresnel(dot(o.eyeDirection, normalize(o.eyeDirection + normalize(reflect(o.viewDirection, m.geometryNormal))))));
+
+    color += emissiveColor;
 
     if(m.tile_mask == Mask_ID_Sky) {
         vec3 rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1.0), 0.0);
