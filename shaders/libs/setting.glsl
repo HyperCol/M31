@@ -6,14 +6,31 @@
 #define High 2
 #define Ultra 3
 
+#define PCSS 0
+#define Vaule 1
+
 //Lighting Setting
 #define Sun_Light_Luminance 2.0
 #define Moon_Light_Luminance 0.03
-#define Blocks_Light_Luminance 0.1
+#define Blocks_Light_Luminance 0.05
 #define Nature_Light_Min_Luminance 0.05
-#define No_Nature_Light_Luminance 0.0
 
 #define Held_Light_Quality Medium                   //[Medium High]
+
+//Sun Light
+#define Soft_Shadow_Quality High                    //[OFF High Ultra]
+#define Penumbra_Shadow PCSS                        //[PCSS 1 2 4 8 16 32 64]
+
+//Ambient Light
+#define SSAO_Quality Medium                         //[OFF Medium] HBAO quality
+    #define SSAO_Falloff 0.7                        //
+    #define SSAO_Bias 0.0                           //
+    #define SSAO_Direction_Step 4                   //
+    #define SSAO_Rotation_Step 8                    //
+    #define SSAO_Radius 0.3                         //
+
+//#define Disabled_Sky_Occlusion
+#define Sky_Light_Level_Min 0                       //[0 1 2 3 4 5 6 7 8 9 10 11 12 13 14]
 
 //Atmosphere
 #define Atmospheric_Rayleigh_Scattering 1.0

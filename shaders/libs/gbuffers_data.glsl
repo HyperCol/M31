@@ -76,6 +76,14 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     m.texturedNormal    = DecodeSpheremap(tex2.rg);
     m.geometryNormal    = DecodeSpheremap(unpack2x8(tex2.b));
 
+    #ifdef Disabled_Sky_Occlusion
+        m.lightmap.y = 1.0;
+    #endif
+
+    #if Sky_Light_Level_Min > 0
+        m.lightmap.y = max(float(Sky_Light_Level_Min) / 15.0, m.lightmap.y);
+    #endif
+
     return m;
 } 
 

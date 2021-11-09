@@ -133,17 +133,20 @@ float ComputeAO(in vec3 P, in vec3 N, in vec3 S) {
     float vodtv = dot(V, V);
     float ndotv = dot(N, V) * inversesqrt(vodtv);
 
-    float falloff = vodtv * -pow2(0.7071) + 1.0;
+    float falloff = vodtv * -pow2(SSAO_Falloff) + 1.0;
 
     // Use saturate(x) instead of max(x,0.f) because that is faster
-    return saturate(ndotv - 0.0) * saturate(falloff);
+    return saturate(ndotv - SSAO_Bias) * saturate(falloff);
 }
 
 float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
-    int steps = 8;
+    #if SSAO_Quality == OFF
+    return 1.0;
+    #else
+    int steps = SSAO_Rotation_Step;
     float invsteps = 1.0 / float(steps);
 
-    int rounds = 4;
+    int rounds = SSAO_Direction_Step;
 
     if(m.tile_mask == Mask_ID_Hand) return 1.0;
 
@@ -151,12 +154,12 @@ float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
 
     float dither = 0.5;//R2Dither(ApplyTAAJitter(texcoord) * resolution);
 
-    float radius = 128.0 / v.viewLength;
+    float radius = SSAO_Radius / (float(rounds) * v.viewLength);
 
     for(int j = 0; j < rounds; j++){
         for(int i = 0; i < steps; i++) {
             float a = (float(i) + dither) * invsteps * 2.0 * Pi;
-            vec2 offset = vec2(cos(a), sin(a)) * texelSize * (float(j + 1) * radius);
+            vec2 offset = vec2(cos(a), sin(a)) * (float(j + 1) * radius);
 
             vec2 offsetCoord = coord + offset;
             //if(abs(offsetCoord.x - 0.5) >= 0.5 || abs(offsetCoord.y - 0.5) >= 0.5) break;
@@ -170,6 +173,7 @@ float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
     }
 
     return 1.0 - ao / (float(rounds) * float(steps));
+    #endif
 }
 
 void main() {
@@ -271,12 +275,6 @@ void main() {
     color = color / (color + 1.0);
     color = GammaToLinear(color);
 
-    float P = ExpToLinerDepth(texture(depthtex0, vec2(0.5)).x);
-	float z = ExpToLinerDepth(texture(depthtex0, texcoord).x);
-
-    float CoC = Camera_Aperture * ((Camera_Focal_Length * (z - P)) / (z * (P - Camera_Focal_Length)));
-          CoC = min(32.0, CoC) / 32.0;
-
-    gl_FragData[0] = vec4(color, CoC);
+    gl_FragData[0] = vec4(color, ao);
 }
 /* DRAWBUFFERS:3 */
