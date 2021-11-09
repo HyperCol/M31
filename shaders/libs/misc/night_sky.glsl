@@ -18,7 +18,7 @@ vec4 DrawMoon(in vec3 L, vec3 direction, float hit_planet) {
                                shadowModelView[2].xy, L.z);
 
     vec3 coord3 = lightModelView * direction; 
-    vec2 coord2 = coord3.xy / coord3.z;
+    vec2 coord2 = coord3.xy / abs(coord3.z);
          coord2 *= max(0.0, traceingMoon2.x) / (moon_radius * Moon_Radius) * inversesqrt(moon_in_one_tile); 
          coord2 = coord2 * 0.5 + 0.5;
 
