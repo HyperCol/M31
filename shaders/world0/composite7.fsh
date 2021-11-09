@@ -130,7 +130,7 @@ vec3 GetVariance(in vec2 coord, out vec3 minColor, out vec3 maxColor) {
 
 void main() {
     //exposure
-    vec3 centerSample = textureLod(composite, vec2(0.5), log2(viewHeight)).rgb;
+    vec3 centerSample = textureLod(composite, vec2(0.5), floor(log2(viewHeight))).rgb;
 
     float exposureCurrent = luminance3(centerSample);
 

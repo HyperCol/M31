@@ -147,7 +147,7 @@ void main() {
 	float exposure = pow(texture(composite, vec2(0.5)).a, 2.2);
           exposure = -exposure / (exposure - 1.0);
 		  exposure = exposure * MappingToHDR;
-		  exposure = pow(exposure, 1.0 / 2.2) * 50.0;
+		  exposure = pow(exposure, 0.25) * 100.0;
 	#else
 	float exposure = 800.0;
 	#endif 
