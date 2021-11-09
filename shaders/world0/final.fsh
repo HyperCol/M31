@@ -139,8 +139,6 @@ void main() {
 	//color = mix(color, bloom.rgb * max(1.0, Bloom_Intensity), min(1.0, Bloom_Intensity));
 	color += bloom.rgb * exp2(Bloom_Exposure_Value);
 
-	//color = texture(gnormal, texcoord * 0.5).rgb;
-
 	const float K = 12.5;
 
 	#ifdef Camera_Average_Exposure

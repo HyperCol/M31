@@ -10,6 +10,8 @@
 #include "/libs/shadowmap/shadowmap_common.glsl"
 #include "/libs/misc/night_sky.glsl"
 
+uniform float centerDepthSmooth;
+
 float R2Dither(in vec2 coord){
   float a1 = 1.0 / 0.75487766624669276;
   float a2 = 1.0 / 0.569840290998;
@@ -275,6 +277,19 @@ void main() {
     color = color / (color + 1.0);
     color = GammaToLinear(color);
 
-    gl_FragData[0] = vec4(color, ao);
+	#ifdef Camera_Focal_Distance_Auto
+	float P = ExpToLinerDepth(centerDepthSmooth);
+	#else
+	float P = Camera_Focal_Distance;
+	#endif
+
+	float z = ExpToLinerDepth(texture(depthtex0, texcoord).x);
+
+    float CoC = Camera_Aperture * ((Camera_Focal_Length * (z - P)) / (z * (P - Camera_Focal_Length)));
+          //CoC = min(32.0, CoC) / 32.0;
+
+    float alpha = clamp(CoC / 32.0, -1.0, 1.0) * 0.5 + 0.5;
+
+    gl_FragData[0] = vec4(color, alpha);
 }
 /* DRAWBUFFERS:3 */
