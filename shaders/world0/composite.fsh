@@ -25,14 +25,13 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
     int steps = 6;
     float invsteps = 1.0 / float(steps);
 
-    //planet shadow
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0, -1.0, 0.0), planet_radius);
-    float planetShadow = 1.0;
-    if(tracingPlanet.x > 0.0 && tracingPlanet.y > 0.0) {
-        planetShadow = exp(-0.00001 * (tracingPlanet.y - tracingPlanet.x));
-    }
-
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
+
+    #ifndef Soft_Planet_Shadow
+    if(tracingPlanet.x > 0.0 && tracingPlanet.y > 0.0) return vec3(0.0);
+    #endif
+
     if(tracingAtmosphere.y < 0.0) return vec3(1.0);
 
     float stepLength = tracingAtmosphere.y * invsteps;
@@ -53,7 +52,13 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
     vec3 tau = (rayleigh_scattering + rayleigh_absorption) * opticalDepth.x + (mie_scattering + mie_absorption) * opticalDepth.y + (ozone_absorption + ozone_scattering) * opticalDepth.z;
     vec3 transmittance = exp(-tau);
 
-    return transmittance * planetShadow;
+    #ifdef Soft_Planet_Shadow
+        if(tracingPlanet.x > 0.0 && tracingPlanet.y > 0.0) {
+            transmittance *= exp(-0.00001 * (tracingPlanet.y - tracingPlanet.x));
+        }
+    #endif
+
+    return transmittance;
 }
 
 void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_color, in vec3 rayOrigin, in vec3 rayDirection, in vec3 mainLightDirection, in vec3 secLightDirection, in vec2 tracing) {
@@ -171,6 +176,7 @@ float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
             vec3 S = nvec3(gbufferProjectionInverse * nvec4(vec3(ApplyTAAJitter(offsetCoord), offsetDepth) * 2.0 - 1.0));
 
             ao += ComputeAO(v.vP, m.texturedNormal, S);
+            //ao += ComputeAO(v.vP, m.texturedNormal, S) * step(max(abs(offsetCoord.x - 0.5), abs(offsetCoord.y - 0.5)), 0.5);
         }
     }
 
@@ -196,13 +202,13 @@ void main() {
 
     float ao = ScreenSpaceAmbientOcclusion(texcoord, m, o);
 
-    float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y), pow2(0.9), 1.0));
+    float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0));
     float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 8.0, 1.0));
 
     vec3 AmbientLight = vec3(0.0);
          AmbientLight += m.albedo * SunLightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
          AmbientLight += m.albedo * SkyLightingColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
-         AmbientLight *= mix(SkyLighting0, SkyLighting1, 0.8) * (1.0 - m.metal) * (1.0 - m.metallic);
+         AmbientLight *= mix(SkyLighting0, SkyLighting1, 0.7) * (1.0 - m.metal) * (1.0 - m.metallic);
 
     color += AmbientLight;
 
@@ -239,8 +245,11 @@ void main() {
     color += heldLight;
     #endif
 
+    float blockLight0 = (m.lightmap.x * m.lightmap.x * m.lightmap.x) * (ao * ao * ao);
+    float blockLight1 = 1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0));
+
     vec3 blockLight = (BlockLightingColor * m.albedo);
-         blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (pow2(m.lightmap.x) + 1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0))) * (1.0 - m.metallic) * (1.0 - m.metal) * (1.0 - m.emissive);
+         blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (blockLight0 + blockLight1) * (1.0 - m.metallic) * (1.0 - m.metal) * (1.0 - m.emissive);
 
     color += blockLight;
 

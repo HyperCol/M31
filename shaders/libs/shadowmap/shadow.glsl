@@ -28,9 +28,21 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
 
     const float radius = 4.0;
 
+    #if Soft_Shadow_Quality == OFF
+    shading = step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x);
+    #else
+
+    #if Soft_Shadow_Quality == Ultra
+    int steps = 32;
+    float invsteps = 1.0 / float(steps);
+    #else
     int steps = 16;
     float invsteps = 1.0 / float(steps);
+    #endif
 
+    #if Soft_Shadow_Penumbra != PCSS
+    float penumbra = TexelBlurRadius * 0.125 * Soft_Shadow_Penumbra / Shadow_Depth_Mul;
+    #else
     float blocker = 0.0;
     int blockerCount = 0;
 
@@ -59,6 +71,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
     float depth = texture(shadowtex0, shadowCoord.xy).x;
     float penumbra = (shadowCoord.z - blocker) / blocker / Shadow_Depth_Mul * 32.0;
           penumbra = min(penumbra + 1.0, 16.0) * TexelBlurRadius;
+    #endif
 
     for(int i = 0; i < steps; i++) {
         float a = (float(i) + dither) * (sqrt(5.0) - 1.0) * Pi;
@@ -69,6 +82,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
     }
 
     shading *= invsteps;
+    #endif
 
     return vec3(shading);
 }

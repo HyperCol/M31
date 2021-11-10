@@ -9,17 +9,27 @@
 #define PCSS 0
 #define Vaule 1
 
+#define RGB 0
+#define Color_Temperature 1
+
 //Lighting Setting
 #define Sun_Light_Luminance 2.0
 #define Moon_Light_Luminance 0.03
 #define Blocks_Light_Luminance 0.05
-#define Nature_Light_Min_Luminance 0.05
+#define Nature_Light_Min_Luminance 0.03
 
+//Blocks Light
 #define Held_Light_Quality Medium                   //[Medium High]
+#define Blocks_Light_Color Color_Temperature        //[RGB Color_Temperature]
+#define Blocks_Light_Color_Temperture 3000.0        //[1700.0 1850.0 2000.0 2500.0 3000.0 3200.0 3275.0 3380.0 5000.0 5500.0 6000.0 6500.0 7000.0 8000.0]
+#define Blocks_Light_Color_R 1.0                    //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define Blocks_Light_Color_G 0.7                    //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define Blocks_Light_Color_B 0.3                    //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define Blocks_Light_Intensity 1.0                  //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 
 //Sun Light
 #define Soft_Shadow_Quality High                    //[OFF High Ultra]
-#define Penumbra_Shadow PCSS                        //[PCSS 1 2 4 8 16 32 64]
+#define Soft_Shadow_Penumbra PCSS                   //[PCSS 1 2 4 8 16 32]
 
 //Ambient Light
 #define SSAO_Quality Medium                         //[OFF Medium] HBAO quality
@@ -33,13 +43,38 @@
 #define Sky_Light_Level_Min 0                       //[0 1 2 3 4 5 6 7 8 9 10 11 12 13 14]
 
 //Atmosphere
-#define Atmospheric_Rayleigh_Scattering 1.0
-#define Atmospheric_Rayleigh_Absorption 0.0
-#define Atmospheric_Mie_Scattering 1.0
-#define Atmospheric_Mie_Absorption 1.0
-#define Atmospheric_Ozone_Scattering 0.0
-#define Atmospheric_Ozone_Absorption 1.0
 #define Atmospheric_Shape Sphere                    //[Sphere Cube]
+
+//#define Soft_Planet_Shadow                          //
+
+#define Planet_Radius 6360000.0                     //[]
+#define Atmosphere_Radius 6420000.0                 //[]
+
+#define Custom -1
+#define Earth_Like 0
+#define Atmosphere_Profile Earth_Like               //[Custom Earth_Like]
+
+#define Rayleigh_Scattering 1.0                     //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define Rayleigh_Absorption 0.0                     //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define Rayleigh_Transmittance_R 4.0                //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
+#define Rayleigh_Transmittance_G 12.0               //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
+#define Rayleigh_Transmittance_B 32.0               //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
+#define Rayleigh_Distribution 8000.0                //[500.0 1000.0 1500.0 2000.0 2500.0 3000.0 3500.0 4000.0 4500.0 5000.0 5500.0 6000.0 6500.0 7000.0 7500.0 8000.0 8500.0 9000.0 9500.0 10000.0]
+
+#define Mie_Scattering 1.0                          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define Mie_Absorption 0.1                          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define Mie_Transmittance_R 4.0                     //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
+#define Mie_Transmittance_G 4.0                     //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
+#define Mie_Transmittance_B 4.0                     //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
+#define Mie_Distribution 1000.0                     //[500.0 1000.0 1500.0 2000.0 2500.0 3000.0 3500.0 4000.0 4500.0 5000.0 5500.0 6000.0 6500.0 7000.0 7500.0 8000.0 8500.0 9000.0 9500.0 10000.0]
+
+#define Ozone_Scattering 0.0                        //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define Ozone_Absorption 1.0                        //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define Ozone_Transmittance_R 0.41112               //[]
+#define Ozone_Transmittance_G 0.99576               //[]
+#define Ozone_Transmittance_B 0.00427               //[]
+#define Ozone_Height_Height 25000.0                 //[]
+#define Ozone_Height_Thickness 15000.0              //[]
 
 //Sky
 #define Moon_Texture_Luminance 4.0                  //[1.0 2.0 3.0 4.0 5.0 6.0 7.0]
@@ -62,8 +97,8 @@
 #define Camera_ISO 200                              //[25 50 100 200 400 800 1600]
 
 #define Camera_Exposure_Value 0.0                   //[-4.0 -3.0 -2.0 -1.0 0.0 1.0 2.0 3.0 4.0]
-#define Camera_Exposure_Min_EV 0.0                  //[-2.0 -1.0 0.0 1.0 2.0]
-#define Camera_Exposure_Max_EV 8.0                  //[4.0 6.0 8.0 10.0 12.0]
+#define Camera_Exposure_Min_EV -1.0                 //[-4.0 -3.0 -2.5 -2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 2.0]
+#define Camera_Exposure_Max_EV 6.0                  //[3.0 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 9.0]
 
 #define Camera_Average_Exposure                     //
 #define Camera_Exposure_Delay 2.0                   //[0.5 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0]
@@ -77,8 +112,9 @@
 #define Camera_FPS 45.0                             //[25.0 30.0 45.0 60.0 90.0 120.0 144.0 240.0]
 #define Camera_Shutter_Speed 0                      //[0 10 20 30 40 50 60 70 80 90 100 150 200 300 400]
 
-//#define Bloom_Intensity 0.2                         //[0.05 0.1 0.2 0.4 0.6 0.8 1.0 2.0 4.0 8.0 16.0]
-#define Bloom_Exposure_Value -3.0                     //[-5.0 -4.5 -4.0 -3.5 -3.0 -2.5 -2.0 -1.5 -1.0]
+#define Enabled_Bloom
+    //#define Bloom_Intensity 0.2                         //[0.05 0.1 0.2 0.4 0.6 0.8 1.0 2.0 4.0 8.0 16.0]
+    #define Bloom_Exposure_Value -3.0                     //[-5.0 -4.5 -4.0 -3.5 -3.0 -2.5 -2.0 -1.5 -1.0]
     //#define Bloom_Intensity_Test                    //
 
 //Antialiasing

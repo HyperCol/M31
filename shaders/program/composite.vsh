@@ -57,6 +57,17 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
     return transmittance;
 }
 
+// Values from: http://blenderartists.org/forum/showthread.php?270332-OSL-Goodness&p=2268693&viewfull=1#post2268693   
+vec3 ColorTemperatureToRGB(const in float temperature){
+    mat3 m = (temperature <= 6500.0) ? mat3(vec3(0.0, -2902.1955373783176, -8257.7997278925690),
+                                            vec3(0.0, 1669.5803561666639, 2575.2827530017594),
+                                            vec3(1.0, 1.3302673723350029, 1.8993753891711275)) : 
+                                        mat3(vec3(1745.0425298314172, 1216.6168361476490, -8257.7997278925690),
+                                            vec3(-2666.3474220535695, -2173.1012343082230, 2575.2827530017594),
+                                            vec3(0.55995389139931482, 0.70381203140554553, 1.8993753891711275)); 
+    return mix(clamp(vec3(m[0] / (vec3(clamp(temperature, 1000.0, 40000.0)) + m[1]) + m[2]), vec3(0.0), vec3(1.0)), vec3(1.0), smoothstep(1000.0, 0.0, temperature));
+}
+
 void main() {
     gl_Position = ftransform();
 
@@ -81,7 +92,12 @@ void main() {
     MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.5, 0.15) * Moon_Light_Luminance;
     LightingColor       = SunLightingColor + MoonLightingColor;
     SkyLightingColor    = max(vec3(0.0), 1.0 - CalculateLocalInScattering(samplePosition, worldUpVector)) * (sum3(SunLightingColor) + sum3(MoonLightingColor) + Nature_Light_Min_Luminance);
-    BlockLightingColor  = vec3(1.0, 0.782, 0.344) * Blocks_Light_Luminance;
+
+    #if Blocks_Light_Color == Color_Temperature
+    BlockLightingColor  = ColorTemperatureToRGB(Blocks_Light_Color_Temperture) * Blocks_Light_Intensity * Blocks_Light_Luminance;
+    #else
+    BlockLightingColor  = vec3(Blocks_Light_Color_R, Blocks_Light_Color_G, Blocks_Light_Color_B) * (Blocks_Light_Intensity * Blocks_Light_Luminance / max(Blocks_Light_Color_R, max(Blocks_Light_Color_G, Blocks_Light_Color_B)));
+    #endif
 
     shadowFade = saturate(rescale(abs(worldSunVector.y), 0.05, 0.1));
 

@@ -136,24 +136,26 @@ void main() {
 		color = vec3(sum3(color));
 	#endif
 
+	#ifdef Enabled_Bloom
 	//color = mix(color, bloom.rgb * max(1.0, Bloom_Intensity), min(1.0, Bloom_Intensity));
 	color += bloom.rgb * exp2(Bloom_Exposure_Value);
+	#endif
 
 	const float K = 12.5;
 
 	#ifdef Camera_Average_Exposure
-	float exposure = pow(texture(composite, vec2(0.5)).a, 2.2);
-          exposure = -exposure / (exposure - 1.0);
-		  exposure = exposure * MappingToHDR;
-		  exposure = pow(exposure, 0.25) * 100.0;
+	float ev100 = pow(texture(composite, vec2(0.5)).a, 2.2);
+          ev100 = -ev100 / (ev100 - 1.0);
+		  ev100 = ev100 * MappingToHDR;
+		  ev100 = pow(ev100, 0.25) / K * 100.0;	
 	#else
-	float exposure = 800.0;
+	float ev100 = 640.0;
 	#endif 
 
-	float ev = log2(exposure / K) - Camera_Exposure_Value;
+	float ev = log2(ev100) - Camera_Exposure_Value;
 		  ev = clamp(ev, Camera_Exposure_Min_EV, Camera_Exposure_Max_EV);
 
-	color *= 1.0 / (exp2(ev));
+	color *= 1.0 / (1.2 * exp2(ev));
 	color *= Camera_ISO;
 
     color = Uncharted2Tonemap(color * 2.0);
