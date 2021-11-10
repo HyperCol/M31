@@ -157,7 +157,7 @@ float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
 
     if(m.tile_mask == Mask_ID_Hand) return 1.0;
 
-    float ao = 1.0;
+    float ao = 0.0;
 
     float dither = 0.5;//R2Dither(ApplyTAAJitter(texcoord) * resolution);
 
