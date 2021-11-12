@@ -13,10 +13,10 @@
 #define Color_Temperature 1
 
 //Lighting Setting
-#define Sun_Light_Luminance 2.0
-#define Moon_Light_Luminance 0.03
-#define Blocks_Light_Luminance 0.05
-#define Nature_Light_Min_Luminance 0.03
+#define Sun_Light_Luminance 6.0
+#define Moon_Light_Luminance 0.1
+#define Blocks_Light_Luminance 0.2
+#define Nature_Light_Min_Luminance 0.1
 
 //Blocks Light
 #define Held_Light_Quality Medium                   //[Medium High]

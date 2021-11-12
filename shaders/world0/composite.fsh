@@ -146,7 +146,7 @@ float ComputeAO(in vec3 P, in vec3 N, in vec3 S) {
     return saturate(ndotv - SSAO_Bias) * saturate(falloff);
 }
 
-float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
+float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
     #if SSAO_Quality == OFF
     return 1.0;
     #else
@@ -168,7 +168,7 @@ float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
             float a = (float(i) + dither) * invsteps * 2.0 * Pi;
             vec2 offset = vec2(cos(a), sin(a)) * (float(j + 1) * radius);
 
-            vec2 offsetCoord = coord + offset;
+            vec2 offsetCoord = texcoord + offset;
             //if(abs(offsetCoord.x - 0.5) >= 0.5 || abs(offsetCoord.y - 0.5) >= 0.5) break;
 
             float offsetDepth = texture(depthtex0, offsetCoord).x;
@@ -183,7 +183,26 @@ float ScreenSpaceAmbientOcclusion(in vec2 coord, in Gbuffers m, in Vector v) {
     return 1.0 - ao / (float(rounds) * float(steps));
     #endif
 }
+/*
+float ScreenSpaceContactShadow(in Gbuffers m, in Vector v) {
+    float shading = 0.0;
 
+    int steps = 12;
+    float invsteps = 1.0 / float(steps);
+
+    vec3 direction = sunVector * invsteps;
+    vec3 position = v.vP + direction;
+
+    for(int i = 0; i < steps; i++) {
+        vec3 sampleCoord = nvec3(gbufferProjection * nvec4(position)) * 0.5 + 0.5;
+        float testDepth = texture(depthtex0, sampleCoord.xy).x;
+
+        position += direction;
+    }
+
+    return 1.0 - shading;
+}
+*/
 void main() {
     //material
     Gbuffers    m = GetGbuffersData(texcoord);
@@ -200,7 +219,7 @@ void main() {
 
     color += sunLight * LightingColor * shading * shadowFade;
 
-    float ao = ScreenSpaceAmbientOcclusion(texcoord, m, o);
+    float ao = ScreenSpaceAmbientOcclusion(m, o);
 
     float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0));
     float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 8.0, 1.0));
@@ -212,16 +231,17 @@ void main() {
 
     color += AmbientLight;
 
-    #if Held_Light_Quality == High
+    vec3 handHeldLight = m.albedo * invPi * BlockLightingColor * (float(heldBlockLightValue) + float(heldBlockLightValue2)) / 15.0;
 
+    #if Held_Light_Quality == High
     vec3 handOffset = nvec3(gbufferProjectionInverse * nvec4(vec3(1.0, 0.5, 0.0) * 2.0 - 1.0)) * vec3(1.0, 1.0, 0.0);
     if(m.tile_mask == Mask_ID_Hand) handOffset = vec3(0.0);
 
     vec3 lP1 = o.vP - handOffset * 4.0;
     vec3 lP2 = o.vP + handOffset * 4.0;
 
-    float heldLightDistance1 = 1.0 / pow2(length(lP1));
-    float heldLightDistance2 = 1.0 / pow2(length(lP2)); 
+    float heldLightDistance1 = min(3.0, 1.0 / pow2(length(lP1)));
+    float heldLightDistance2 = min(3.0, 1.0 / pow2(length(lP2)));
 
     lP1 = normalize(lP1);
     lP2 = normalize(lP2);
@@ -236,12 +256,12 @@ void main() {
 
     color += heldLight1 + heldLight2;
     #else
-    float heldLightDistance = 1.0 / pow2(o.viewLength);
+    float heldLightDistance = min(3.0, 1.0 / pow2(o.viewLength));
 
     vec3 heldLight  = BlockLightingColor * SpecularLighting(m, o.eyeDirection, o.eyeDirection) * heldLightDistance;
          heldLight += BlockLightingColor * DiffuseLighting(m, o.eyeDirection, o.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-3, 1.0)) * 6.0;
          heldLight *= max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0;
-
+    
     color += heldLight;
     #endif
 

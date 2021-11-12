@@ -158,7 +158,7 @@ void main() {
 	color *= 1.0 / (1.2 * exp2(ev));
 	color *= Camera_ISO;
 
-    color = Uncharted2Tonemap(color * 2.0);
+    color = Uncharted2Tonemap(color);
     ////color /= Uncharted2Tonemap(vec3(9.0));
 	color = saturation(color, 1.2);
     //color = ACESToneMapping(color);
