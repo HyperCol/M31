@@ -13,6 +13,10 @@ uniform sampler2D depthtex1;
 
 #include "/libs/mask_check.glsl"
 
+float MaskCheck(in float x, in float ID) {
+    return step(ID - 0.5, x) * step(x, ID + 0.5);
+}
+
 struct Gbuffers {
     vec3    albedo;
     float   alpha;
@@ -38,6 +42,16 @@ struct Gbuffers {
 
     vec3    texturedNormal;
     vec3    geometryNormal;
+
+    float maskSky;
+
+    float maskHand;
+    float maskEntities;
+
+    float maskLeaves;
+    float maskGrass;
+    float maskStemPlants;
+    float maskStem;
 };
 
 Gbuffers GetGbuffersData(in vec2 coord) {
@@ -75,6 +89,16 @@ Gbuffers GetGbuffersData(in vec2 coord) {
 
     m.texturedNormal    = DecodeSpheremap(tex2.rg);
     m.geometryNormal    = DecodeSpheremap(unpack2x8(tex2.b));
+
+    //m.maskSky = 
+    
+    //m.maskHand;
+    //m.maskEntities;
+
+    m.maskLeaves = MaskCheck(m.tile_mask, MaskIDLeaves);
+    //m.maskGrass;
+    //m.maskStemPlants;
+    //m.maskStem;
 
     #ifdef Disabled_Sky_Occlusion
         m.lightmap.y = 1.0;

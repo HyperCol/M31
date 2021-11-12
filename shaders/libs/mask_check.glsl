@@ -8,6 +8,11 @@
 #define Mask_ID_Water 1.0
 #define Mask_ID_Sky_2 255.0
 
+#define MaskIDLeaves 18.0
+#define MaskIDGrass 31.0
+#define MaskIDStemPlants 6.0
+//#define MaskIDStem 
+
 #ifdef Include_Gbuffers_Data
 
 #endif

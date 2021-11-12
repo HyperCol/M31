@@ -1,6 +1,9 @@
 #version 130
 
+in vec3 mc_Entity;
 in vec4 at_tangent;
+
+out float tileMask;
 
 out vec2 texcoord;
 out vec2 lmcoord;
@@ -13,6 +16,7 @@ out vec4 color;
 
 #include "/libs/setting.glsl"
 #include "/libs/uniform.glsl"
+#include "/libs/mask_check.glsl"
 
 void main() {
     gl_Position = ftransform();
@@ -26,4 +30,10 @@ void main() {
 
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
     lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
+
+    tileMask = Mask_ID_Land;
+
+    if(mc_Entity.x == MaskIDLeaves) {
+        tileMask = 18.0;
+    }
 }
