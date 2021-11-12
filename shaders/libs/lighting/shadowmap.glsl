@@ -1,6 +1,6 @@
-vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
+vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal, in float material_bias) {
     float ndotl = dot(lightDirection, normal);
-    if(ndotl < 0.0) return vec3(0.0);
+    if(ndotl < 0.0 && material_bias < 1e-5) return vec3(0.0);
 
     vec3 worldNormal = mat3(gbufferModelViewInverse) * normal;
 
@@ -15,7 +15,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal) {
     shadowCoord = RemapShadowCoord(shadowCoord);
     shadowCoord = shadowCoord * 0.5 + 0.5;
 
-    float bias = max(1.0, 8.0 / distortion);
+    float bias = max(1.0 + material_bias, 8.0 / distortion);
           bias = bias * Shadow_Depth_Mul * shadowTexelSize;
 
     shadowCoord.z -= bias;

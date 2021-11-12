@@ -211,14 +211,16 @@ vec3 Diffusion(in float depth, in vec3 t) {
 }
 
 vec3 LeavesShading(vec3 L, vec3 eye, vec3 n, vec3 albedo, vec3 sigma_t, vec3 sigma_s) {
-    //albedo = pow(albedo, vec3(0.9));
+    albedo = pow(albedo, vec3(0.9));
 
-    vec3 R = Diffusion(0.05, sigma_t);
+    vec3 R = Diffusion(0.01, sigma_t);
 
     float mu = dot(L, -eye);
-    float phase = mix(HG(mu, 0.2), HG(mu, 0.7), 0.2) * 10.0;
+    float phase = mix(HG(mu, -0.1), HG(mu, 0.7), 0.6);
 
-    return (albedo * R * sigma_s) * (invPi * phase);
+    float ndotl = max(0.0, dot(L, n));
+
+    return (R * albedo / sigma_t * sigma_s) * (invPi * phase * (1.0 - ndotl));
 }
 
 void main() {
@@ -230,10 +232,11 @@ void main() {
 
     vec3 color = vec3(0.0);
 
-    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal);
+    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal, m.maskLeaves);
 
     vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection);
          sunLight += SpecularLighting(m, lightVector, o.eyeDirection);
+         sunLight += LeavesShading(lightVector, o.eyeDirection, m.texturedNormal, m.albedo.rgb, vec3(0.1), vec3(0.1)) * m.maskLeaves;
 
     color += sunLight * LightingColor * shading * shadowFade;
 
