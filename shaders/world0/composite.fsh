@@ -7,7 +7,7 @@
 #include "/libs/gbuffers_data.glsl"
 #include "/libs/lighting/brdf.glsl"
 #include "/libs/volumetric/atmospheric_common.glsl"
-#include "/libs/shadowmap/shadowmap_common.glsl"
+#include "/libs/lighting/shadowmap_common.glsl"
 #include "/libs/misc/night_sky.glsl"
 
 uniform float centerDepthSmooth;
@@ -19,7 +19,7 @@ float R2Dither(in vec2 coord){
   return mod(coord.x * a1 + coord.y * a2, 1);
 }
 
-#include "/libs/shadowmap/shadow.glsl"
+#include "/libs/lighting/shadowmap.glsl"
 
 vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
     int steps = 6;
@@ -203,6 +203,24 @@ float ScreenSpaceContactShadow(in Gbuffers m, in Vector v) {
     return 1.0 - shading;
 }
 */
+
+vec3 Diffusion(in float depth, in vec3 t) {
+    depth = max(1e-5, depth);
+
+    return exp(-depth * t) / (4.0 * Pi * t * max(1.0, depth));
+}
+
+vec3 LeavesShading(vec3 L, vec3 eye, vec3 n, vec3 albedo, vec3 sigma_t, vec3 sigma_s) {
+    //albedo = pow(albedo, vec3(0.9));
+
+    vec3 R = Diffusion(0.05, sigma_t);
+
+    float mu = dot(L, -eye);
+    float phase = mix(HG(mu, 0.2), HG(mu, 0.7), 0.2) * 10.0;
+
+    return (albedo * R * sigma_s) * (invPi * phase);
+}
+
 void main() {
     //material
     Gbuffers    m = GetGbuffersData(texcoord);

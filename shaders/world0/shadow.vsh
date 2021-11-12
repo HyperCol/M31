@@ -1,7 +1,7 @@
 #version 130
 
 #include "/libs/primitives.glsl"
-#include "/libs/shadowmap/shadowmap_common.glsl"
+#include "/libs/lighting/shadowmap_common.glsl"
 
 out vec2 texcoord;
 
