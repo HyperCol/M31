@@ -82,7 +82,17 @@ float unpack2x8X(in float packge) {
 float unpack2x8Y(in float packge) {
     return (1.0 / 255.0) * floor(packge * (256.0));
 }
+/*
+float pack2x16(in vec2 x) {
+    float pack = dot(round(x * 65535.0), vec2(1.0, 65536.0));
+    return pack / (exp2(32.0) - 1.0);
+}
 
+vec2 unpack2x16(in float x) {
+    x *= (exp2(32.0) - 1.0);
+    return vec2(mod(x, 65536.0), floor(x / 65536.0)) / 65535.0;
+}
+*/
 vec2 signNotZero(vec2 v) {
     return vec2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
 }

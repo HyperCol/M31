@@ -39,6 +39,6 @@ void main() {
     //R : textured normal
     //G : textured normal
     //B : geometry normal
-    gl_FragData[2] = vec4(EncodeNormal, pack2x8(EncodeNormal), 1.0);
+    gl_FragData[2] = vec4(EncodeNormal, EncodeNormal);
 }
 /* DRAWBUFFERS:012 */

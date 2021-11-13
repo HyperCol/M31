@@ -88,7 +88,7 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     m.material_ao   = 0.0;//unpack2x8Y(tex1.b);
 
     m.texturedNormal    = DecodeSpheremap(tex2.rg);
-    m.geometryNormal    = DecodeSpheremap(unpack2x8(tex2.b));
+    m.geometryNormal    = DecodeSpheremap(tex2.ba);
 
     //m.maskSky = 
     
