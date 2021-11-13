@@ -183,26 +183,36 @@ float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
     return 1.0 - ao / (float(rounds) * float(steps));
     #endif
 }
-/*
-float ScreenSpaceContactShadow(in Gbuffers m, in Vector v) {
+
+float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirection) {
     float shading = 0.0;
 
-    int steps = 12;
+    int steps = 8;
     float invsteps = 1.0 / float(steps);
 
-    vec3 direction = sunVector * invsteps;
-    vec3 position = v.vP + direction;
+    float ndotl = dot(LightDirection, m.geometryNormal);
+    if(ndotl < 0.02) return 1.0;
+
+    vec3 bias = m.geometryNormal / dot(LightDirection, m.geometryNormal) * ExpToLinerDepth(v.depth) / 1000.0;
+
+    float dither = R2Dither(ApplyTAAJitter(texcoord) * vec2(viewWidth, viewHeight));
+
+    vec3 direction = LightDirection * invsteps * 0.2;
+    vec3 position = v.vP + direction * dither + bias;
 
     for(int i = 0; i < steps; i++) {
         vec3 sampleCoord = nvec3(gbufferProjection * nvec4(position)) * 0.5 + 0.5;
+        if(abs(sampleCoord.x - 0.5) > 0.5 || abs(sampleCoord.y - 0.5) > 0.5) break;
+
         float testDepth = texture(depthtex0, sampleCoord.xy).x;
+
+        if(sampleCoord.z > testDepth && ExpToLinerDepth(testDepth) + 0.1 > ExpToLinerDepth(sampleCoord.z)) return 0.0;
 
         position += direction;
     }
 
-    return 1.0 - shading;
+    return 1.0;
 }
-*/
 
 vec3 Diffusion(in float depth, in vec3 t) {
     depth = max(1e-5, depth);
@@ -233,12 +243,13 @@ void main() {
     vec3 color = vec3(0.0);
 
     vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal, m.maskLeaves);
+         shading *= ScreenSpaceContactShadow(m, o, lightVector);
 
     vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection);
          sunLight += SpecularLighting(m, lightVector, o.eyeDirection);
          sunLight += LeavesShading(lightVector, o.eyeDirection, m.texturedNormal, m.albedo.rgb, vec3(0.1), vec3(0.1)) * m.maskLeaves;
 
-    color += sunLight * LightingColor * shading * shadowFade;
+    color += sunLight * LightingColor * shading * shadowFade;// * saturate(rescale(dot(lightVector, m.geometryNormal), 0.04, 0.05));
 
     float ao = ScreenSpaceAmbientOcclusion(m, o);
 
