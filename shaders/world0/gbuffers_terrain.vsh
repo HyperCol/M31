@@ -36,4 +36,12 @@ void main() {
     if(mc_Entity.x == MaskIDLeaves) {
         tileMask = 18.0;
     }
+
+    if(mc_Entity.x == MaskIDGrass) {
+        tileMask = 31.0;
+    }
+
+    if(mc_Entity.x == MaskIDDoublePlanetUpper || mc_Entity.x == MaskIDDoublePlanetLower) {
+        tileMask = 31.0;
+    }
 }

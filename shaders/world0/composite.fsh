@@ -184,14 +184,14 @@ float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
     #endif
 }
 
-float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirection) {
+float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirection, in float material_bias) {
     float shading = 0.0;
 
     int steps = 8;
     float invsteps = 1.0 / float(steps);
 
     float ndotl = dot(LightDirection, m.geometryNormal);
-    if(ndotl < 0.02) return 1.0;
+    if(ndotl < 0.02 || material_bias > 0.0) return 1.0;
 
     vec3 bias = m.geometryNormal / dot(LightDirection, m.geometryNormal) * ExpToLinerDepth(v.depth) / 1000.0;
 
@@ -223,10 +223,15 @@ vec3 Diffusion(in float depth, in vec3 t) {
 vec3 LeavesShading(vec3 L, vec3 eye, vec3 n, vec3 albedo, vec3 sigma_t, vec3 sigma_s) {
     albedo = pow(albedo, vec3(0.9));
 
-    vec3 R = Diffusion(0.01, sigma_t);
+    //vec2 t = IntersectCube(-worldLightVector, worldLightVector, vec3(0.0), vec3(0.03125 * 0.5));
+    //float depth = max(0.0, t.y - max(0.0, t.x));
+
+    float depth = 0.03125;
+
+    vec3 R = Diffusion(depth, sigma_t);
 
     float mu = dot(L, -eye);
-    float phase = mix(HG(mu, -0.1), HG(mu, 0.7), 0.6);
+    float phase = mix(HG(mu, -0.1), HG(mu, 0.7), 0.3);
 
     float ndotl = max(0.0, dot(L, n));
 
@@ -242,14 +247,14 @@ void main() {
 
     vec3 color = vec3(0.0);
 
-    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal, m.maskLeaves);
-         shading *= ScreenSpaceContactShadow(m, o, lightVector);
+    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal, m.maskLeaves + m.maskGrass * 2.0);
+         shading *= ScreenSpaceContactShadow(m, o, lightVector, m.maskLeaves + m.maskGrass);
 
     vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection);
          sunLight += SpecularLighting(m, lightVector, o.eyeDirection);
-         sunLight += LeavesShading(lightVector, o.eyeDirection, m.texturedNormal, m.albedo.rgb, vec3(0.1), vec3(0.1)) * m.maskLeaves;
+         sunLight += LeavesShading(lightVector, o.eyeDirection, m.texturedNormal, m.albedo.rgb, vec3(0.05), vec3(0.05)) * (m.maskGrass + m.maskLeaves);
 
-    color += sunLight * LightingColor * shading * shadowFade;// * saturate(rescale(dot(lightVector, m.geometryNormal), 0.04, 0.05));
+    color += sunLight * LightingColor * shading * shadowFade;
 
     float ao = ScreenSpaceAmbientOcclusion(m, o);
 

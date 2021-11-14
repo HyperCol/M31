@@ -96,7 +96,7 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     //m.maskEntities;
 
     m.maskLeaves = MaskCheck(m.tile_mask, MaskIDLeaves);
-    //m.maskGrass;
+    m.maskGrass = MaskCheck(m.tile_mask, MaskIDGrass);
     //m.maskStemPlants;
     //m.maskStem;
 
