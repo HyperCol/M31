@@ -92,7 +92,7 @@ Gbuffers GetGbuffersData(in vec2 coord) {
 
     //m.maskSky = 
     
-    //m.maskHand;
+    m.maskHand = MaskCheck(m.tile_mask, MaskIDHand);
     //m.maskEntities;
 
     m.maskLeaves = MaskCheck(m.tile_mask, MaskIDLeaves);

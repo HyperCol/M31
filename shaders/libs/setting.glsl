@@ -31,6 +31,8 @@
 #define Soft_Shadow_Quality High                    //[OFF High Ultra]
 #define Soft_Shadow_Penumbra PCSS                   //[PCSS 1 2 4 8 16 32]
 
+#define Enabled_Screen_Space_Contact_Shadow         //
+
 //Ambient Light
 #define SSAO_Quality Medium                         //[OFF Medium] HBAO quality
     #define SSAO_Falloff 0.7                        //
@@ -97,7 +99,7 @@
 #define Camera_ISO 200                              //[25 50 100 200 400 800 1600]
 
 #define Camera_Exposure_Value 0.0                   //[-4.0 -3.0 -2.0 -1.0 0.0 1.0 2.0 3.0 4.0]
-#define Camera_Exposure_Min_EV -1.0                 //[-4.0 -3.0 -2.5 -2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 2.0]
+#define Camera_Exposure_Min_EV -2.0                 //[-5.0 -4.0 -3.5 -3.0 -2.5 -2.0 -1.5 -1.0 -0.5 0.0 1.0]
 #define Camera_Exposure_Max_EV 6.0                  //[3.0 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 9.0]
 
 #define Camera_Average_Exposure                     //

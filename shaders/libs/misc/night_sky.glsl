@@ -38,27 +38,20 @@ vec4 DrawMoon(in vec3 L, vec3 direction, float hit_planet) {
 vec3 DrawStars(in vec3 direction, float hit_planet) {
     if(hit_planet > 0.0) return vec3(0.0);
 
-    vec2 coord = vec2(0.0);
-
     float angle = Planet_Angle * 2.0 * Pi;
     float time_angle = frameTimeCounter / (1200.0) * Stars_Speed * 2.0 * Pi;
 
-    //mat2 rotate = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
-    //mat2 time_rotate = mat2(cos(time_angle), sin(time_angle), -sin(time_angle), cos(time_angle));
-
-    //direction.yz *= rotate;
-    //direction.xz *= time_rotate;
+    vec2 t = RaySphereIntersection(vec3(0.0), direction, vec3(0.0), 256.0);
 
     direction.yz = RotateDirection(direction.yz, angle);
     direction.xz = RotateDirection(direction.xz, -time_angle);
 
     vec3 n = abs(direction);
-    vec3 coord3 = n.x > max(n.y, n.z) ? direction.yzx :
-                  n.y > max(n.x, n.z) ? direction.zxy : 
-                  direction;
+    vec2 coord = n.x > max(n.y, n.z) ? direction.yz : n.y > max(n.x, n.z) ? direction.zx : direction.xy;
+         coord *= t.y;
 
-    float stars = saturate(rescale(hash(floor(coord3.xy / coord3.z * 256.0)), (1.0 - Stars_Visible), 1.0)) * Stars_Luminance;
-          stars += float(round(coord3.xy / coord3.z * 256.0 / Polaris_Size - vec2(Polaris_Offset_X, Polaris_Offset_Y)) == vec2(0.0)) * Polaris_Luminance * float(n.y > max(n.x, n.z) && coord3.y > 0.0);
+    float stars = saturate(rescale(hash(floor(coord)), (1.0 - Stars_Visible), 1.0)) * Stars_Luminance;
+          stars += float(round(coord / Polaris_Size - vec2(Polaris_Offset_X, Polaris_Offset_Y)) == vec2(0.0)) * Polaris_Luminance * float(n.y > max(n.x, n.z) && coord.y > 0.0);
 
     return vec3(stars);
 }

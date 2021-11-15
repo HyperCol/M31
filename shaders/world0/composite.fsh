@@ -155,7 +155,7 @@ float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
 
     int rounds = SSAO_Direction_Step;
 
-    if(m.tile_mask == Mask_ID_Hand) return 1.0;
+    if(m.maskHand > 0.9) return 1.0;
 
     float ao = 0.0;
 
@@ -185,7 +185,7 @@ float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
 }
 
 float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirection, in float material_bias) {
-    float shading = 0.0;
+    float shading = 1.0;
 
     int steps = 8;
     float invsteps = 1.0 / float(steps);
@@ -193,11 +193,17 @@ float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirectio
     float ndotl = dot(LightDirection, m.geometryNormal);
     if(ndotl < 0.02 || material_bias > 0.0) return 1.0;
 
-    vec3 bias = m.geometryNormal / dot(LightDirection, m.geometryNormal) * ExpToLinerDepth(v.depth) / 1000.0;
+    float dist = ExpToLinerDepth(v.depth);
+    float distanceStepLength = clamp((dist - shadowDistance * 0.5) / 2.0, 1.0, 16.0);
+
+    vec3 bias = LightDirection / dot(LightDirection, m.geometryNormal) * dist / 500.0;
 
     float dither = R2Dither(ApplyTAAJitter(texcoord) * vec2(viewWidth, viewHeight));
 
-    vec3 direction = LightDirection * invsteps * 0.2;
+    float maxLength = 0.2 * distanceStepLength;
+    float thickness = 0.1 * distanceStepLength;
+
+    vec3 direction = LightDirection * invsteps * maxLength;
     vec3 position = v.vP + direction * dither + bias;
 
     for(int i = 0; i < steps; i++) {
@@ -206,12 +212,15 @@ float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirectio
 
         float testDepth = texture(depthtex0, sampleCoord.xy).x;
 
-        if(sampleCoord.z > testDepth && ExpToLinerDepth(testDepth) + 0.1 > ExpToLinerDepth(sampleCoord.z)) return 0.0;
+        if(sampleCoord.z > testDepth && ExpToLinerDepth(testDepth) + thickness > ExpToLinerDepth(sampleCoord.z)) {
+            shading = 0.0;
+            break;
+        }
 
         position += direction;
     }
 
-    return 1.0;
+    return shading;
 }
 
 vec3 Diffusion(in float depth, in vec3 t) {
@@ -272,7 +281,7 @@ void main() {
 
     #if Held_Light_Quality == High
     vec3 handOffset = nvec3(gbufferProjectionInverse * nvec4(vec3(1.0, 0.5, 0.0) * 2.0 - 1.0)) * vec3(1.0, 1.0, 0.0);
-    if(m.tile_mask == Mask_ID_Hand) handOffset = vec3(0.0);
+    if(m.tile_mask == MaskIDHand) handOffset = vec3(0.0);
 
     vec3 lP1 = o.vP - handOffset * 4.0;
     vec3 lP2 = o.vP + handOffset * 4.0;

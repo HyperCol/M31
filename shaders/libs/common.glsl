@@ -177,6 +177,11 @@ vec2 IntersectCube(vec3 rayOrigin, in vec3 rayDirection, in vec3 shapeCenter, in
     }
 }
 
+vec2 IntersectCube(vec3 rayOrigin, in vec3 rayDirection, in vec3 shapeCenter, in float size) {
+    return IntersectCube(rayOrigin, rayDirection, shapeCenter, vec3(size));
+}
+
+
 float hash(in vec2 p) { // replace this by something better
     p  = 50.0*fract( p*0.3183099 + vec2(0.71,0.113));
     return -1.0+2.0*fract( p.x*p.y*(p.x+p.y) );
