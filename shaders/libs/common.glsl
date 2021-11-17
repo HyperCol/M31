@@ -125,16 +125,6 @@ vec3 DecodeSpheremap(vec2 enc) {
     return n;
 }
 
-float expToLinerDepth(float depth) {
-    vec2 viewDepth = vec2(depth * 2.0 - 1.0, 1.0) * mat2(gbufferProjectionInverse[2].zw, gbufferProjectionInverse[3].zw);
-    return -viewDepth.x / viewDepth.y;
-}
-
-float linerToExpDepth(float linerDepth) {
-    float expDepth = (far + near - 2.0 * far * near / linerDepth) / (near - far);
-    return expDepth * 0.5 + 0.5;
-}
-
 float HG(in float m, in float g) {
   return (0.25 / Pi) * ((1.0 - g*g) / pow(1.0 + g*g - 2.0 * g * m, 1.5));
 }
@@ -187,8 +177,7 @@ float hash(in vec2 p) { // replace this by something better
     return -1.0+2.0*fract( p.x*p.y*(p.x+p.y) );
 }
 
-float hash(in vec3 p)  // replace this by something better
-{
+float hash(in vec3 p) { // replace this by something better
     p  = fract( p*0.3183099+.1 );
 	  p *= 17.0;
     return fract( p.x*p.y*p.z*(p.x+p.y+p.z) );

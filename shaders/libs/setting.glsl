@@ -21,7 +21,7 @@
 //Blocks Light
 #define Held_Light_Quality Medium                   //[Medium High]
 #define Blocks_Light_Color Color_Temperature        //[RGB Color_Temperature]
-#define Blocks_Light_Color_Temperture 3000.0        //[1700.0 1850.0 2000.0 2500.0 3000.0 3200.0 3275.0 3380.0 5000.0 5500.0 6000.0 6500.0 7000.0 8000.0]
+#define Blocks_Light_Color_Temperture 2500.0        //[1700.0 1850.0 2000.0 2500.0 3000.0 3200.0 3275.0 3380.0 5000.0 5500.0 6000.0 6500.0 7000.0 8000.0]
 #define Blocks_Light_Color_R 1.0                    //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 #define Blocks_Light_Color_G 0.7                    //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 #define Blocks_Light_Color_B 0.3                    //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
@@ -40,6 +40,7 @@
     #define SSAO_Direction_Step 4                   //
     #define SSAO_Rotation_Step 8                    //
     #define SSAO_Radius 0.3                         //
+    #define SSAO_Low_Resolution                     //half resolution render ssao
 
 //#define Disabled_Sky_Occlusion
 #define Sky_Light_Level_Min 0                       //[0 1 2 3 4 5 6 7 8 9 10 11 12 13 14]

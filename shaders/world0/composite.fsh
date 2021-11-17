@@ -12,11 +12,17 @@
 
 uniform float centerDepthSmooth;
 
+float t(in float z){
+  if(0.0 <= z && z < 0.5) return 2.0*z;
+  if(0.5 <= z && z < 1.0) return 2.0 - 2.0*z;
+  return 0.0;
+}
+
 float R2Dither(in vec2 coord){
   float a1 = 1.0 / 0.75487766624669276;
   float a2 = 1.0 / 0.569840290998;
 
-  return mod(coord.x * a1 + coord.y * a2, 1);
+  return mod(coord.x * a1 + coord.y * a2, 1.0);
 }
 
 #include "/libs/lighting/shadowmap.glsl"
@@ -159,9 +165,9 @@ float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
 
     float ao = 0.0;
 
-    float dither = 0.5;//R2Dither(ApplyTAAJitter(texcoord) * resolution);
-
     float radius = SSAO_Radius / (float(rounds) * v.viewLength);
+
+    float dither = 0.5;//R2Dither(ApplyTAAJitter(texcoord) * resolution);
 
     for(int j = 0; j < rounds; j++){
         for(int i = 0; i < steps; i++) {
@@ -181,6 +187,7 @@ float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
     }
 
     return 1.0 - ao / (float(rounds) * float(steps));
+    
     #endif
 }
 

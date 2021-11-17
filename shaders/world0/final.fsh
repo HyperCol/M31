@@ -5,8 +5,13 @@ const int colortex0Format = RGBA16;
 const int colortex1Format = RGBA16;
 const int colortex2Format = RGBA16;
 const int colortex3Format = RGBA16;
+const int colortex4Format = RGBA16;
+const int colortex5Format = RGB32F;
+const int colortex6Format = RGBA16;
 const int colortex7Format = RGBA16;
 
+const bool colortex5Clear = false;
+const bool colortex6Clear = false;
 const bool colortex7Clear = false;
 
 const float sunPathRotation = -30.0;
@@ -149,7 +154,7 @@ void main() {
 		  ev100 = ev100 * MappingToHDR;
 		  ev100 = pow(ev100, 0.25) / K * 100.0;	
 	#else
-	float ev100 = 640.0;
+	float ev100 = 25.0;
 	#endif 
 
 	float ev = log2(ev100) - Camera_Exposure_Value;

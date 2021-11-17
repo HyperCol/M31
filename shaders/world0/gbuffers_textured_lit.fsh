@@ -26,7 +26,7 @@ void main() {
 
     //Misc: emissive heightmap self_shadow solid_block tileMaskID material material_ao
 
-    if(albedo.a < Alpha_Test_Reference) discard;
+    if(albedo.a < Alpha_Test_Reference || gl_FragCoord.z > 0.9999) discard;
 
     //R : albedo.rg
     //G : albedo.ba
