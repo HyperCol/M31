@@ -17,6 +17,10 @@ float MaskCheck(in float x, in float ID) {
     return step(ID - 0.5, x) * step(x, ID + 0.5);
 }
 
+float F0ToIOR(in float F0) {
+    return 1.0 / ((2.0 / (sqrt(F0) + 1.0)) - 1.0);
+}
+
 struct Gbuffers {
     vec3    albedo;
     float   alpha;
@@ -52,6 +56,8 @@ struct Gbuffers {
     float maskGrass;
     float maskStemPlants;
     float maskStem;
+
+    float maskWater;
 };
 
 Gbuffers GetGbuffersData(in vec2 coord) {
@@ -99,6 +105,8 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     m.maskGrass = MaskCheck(m.tile_mask, MaskIDGrass);
     //m.maskStemPlants;
     //m.maskStem;
+
+    m.maskWater = MaskCheck(m.tile_mask, MaskIDWater);
 
     #ifdef Disabled_Sky_Occlusion
         m.lightmap.y = 1.0;

@@ -22,9 +22,6 @@ uniform int heldBlockLightValue2;
 vec2 resolution = vec2(viewWidth, viewHeight);
 vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
-const float Pi = 3.14159265;
-const float invPi = 1.0 / 3.14159265;
-
 float ExpToLinerDepth(float depth) {
     vec2 viewDepth = mat2(gbufferProjectionInverse[2].zw, gbufferProjectionInverse[3].zw) * vec2(depth * 2.0 - 1.0, 1.0);
     return -viewDepth.x / viewDepth.y;

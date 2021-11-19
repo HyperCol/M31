@@ -7,8 +7,8 @@ uniform sampler2D depthtex2;
 
 uniform int moonPhase;
 
-vec4 DrawMoon(in vec3 L, vec3 direction, float hit_planet) {
-    if(hit_planet > 0.0) return vec4(0.0);
+void DrawMoon(inout vec3 color, in vec3 L, vec3 direction, float hit_planet) {
+    if(hit_planet > 0.0) return;
 
     vec2 traceingMoon = RaySphereIntersection(vec3(0.0) - L * (moon_distance * Moon_Distance + moon_radius * Moon_Radius), direction, vec3(0.0), moon_radius * Moon_Radius);
     vec2 traceingMoon2 = RaySphereIntersection(vec3(0.0) - L * (moon_distance * Moon_Distance + moon_radius * Moon_Radius), L, vec3(0.0), moon_radius * Moon_Radius);
@@ -30,13 +30,13 @@ vec4 DrawMoon(in vec3 L, vec3 direction, float hit_planet) {
     vec4 moon_texture = texture(depthtex2, coord + chosePhase); moon_texture.rgb = LinearToGamma(moon_texture.rgb);
     float hit_moon = float(abs(coord2.x - 0.5) < 0.5 && abs(coord2.y - 0.5) < 0.5 && coord3.z > 0.0);
 
-    if(abs(coord2.x - 0.5) >= 0.5 || abs(coord2.y - 0.5) >= 0.5 || coord3.z < 0.0) return vec4(0.0);
+    if(abs(coord2.x - 0.5) >= 0.5 || abs(coord2.y - 0.5) >= 0.5 || coord3.z < 0.0) return;
 
-    return vec4(moon_texture.rgb * (Moon_Light_Luminance * Moon_Texture_Luminance), moon_texture.a);
+    color = moon_texture.rgb * (Moon_Light_Luminance * Moon_Texture_Luminance * moon_texture.a);
 }
 
-vec3 DrawStars(in vec3 direction, float hit_planet) {
-    if(hit_planet > 0.0) return vec3(0.0);
+void DrawStars(inout vec3 color, in vec3 direction, in float fade, float hit_planet) {
+    if(hit_planet > 0.0) return;
 
     float angle = Planet_Angle * 2.0 * Pi;
     float time_angle = frameTimeCounter / (1200.0) * Stars_Speed * 2.0 * Pi;
@@ -53,5 +53,5 @@ vec3 DrawStars(in vec3 direction, float hit_planet) {
     float stars = saturate(rescale(hash(floor(coord)), (1.0 - Stars_Visible), 1.0)) * Stars_Luminance;
           stars += float(round(coord / Polaris_Size - vec2(Polaris_Offset_X, Polaris_Offset_Y)) == vec2(0.0)) * Polaris_Luminance * float(n.y > max(n.x, n.z) && coord.y > 0.0);
 
-    return vec3(stars);
+    color += stars * fade;
 }

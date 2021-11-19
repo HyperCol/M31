@@ -4,20 +4,22 @@
 #define Mask_ID_Particles 1.0
 #define Mask_ID_World_Border 1.0
 #define Mask_ID_Entities 1.0
-#define Mask_ID_Water 1.0
 #define Mask_ID_Sky_2 255.0
 
 #define MaskIDHand 3.0
 
 #define MaskIDLeaves 18.0
-
 #define MaskIDGrass 31.0
-    #define MaskIDDoublePlanetUpper 175.0
-    #define MaskIDDoublePlanetLower 176.0
-
+#define MaskIDDoublePlanetUpper 175.0
+#define MaskIDDoublePlanetLower 176.0
 #define MaskIDStemPlants 6.0
-
 //#define MaskIDStem 
+
+#define MaskIDWater 8.0
+#define Water 8.0
+#define Ice 79.0
+#define Slime 165.0
+#define Glass 20.0
 
 #ifdef Include_Gbuffers_Data
 

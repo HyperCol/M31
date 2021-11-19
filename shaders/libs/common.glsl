@@ -1,6 +1,9 @@
 #define MappingToSDR (1.0 / 3000.0)
 #define MappingToHDR (3000.0)
 
+const float Pi = 3.14159265;
+const float invPi = 1.0 / 3.14159265;
+
 vec3 nvec3(in vec4 x) {
     return x.xyz / x.w;
 }
