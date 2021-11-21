@@ -2,6 +2,19 @@
 #define io in
 #endif
 
+#if defined(MC_VERSION)
+uniform vec3 lightVector;
+uniform vec3 worldLightVector;
+
+uniform vec3 sunVector;
+uniform vec3 worldSunVector;
+
+uniform vec3 moonVector;
+uniform vec3 worldMoonVector;
+
+uniform vec3 upVector;
+uniform vec3 worldUpVector;
+#else
 io vec3 lightVector;
 io vec3 worldLightVector;
 
@@ -13,6 +26,7 @@ io vec3 worldMoonVector;
 
 io vec3 upVector;
 io vec3 worldUpVector;
+#endif
 
 io float shadowFade;
 io float starsFade;

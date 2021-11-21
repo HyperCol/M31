@@ -29,7 +29,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal, in 
     const float radius = 4.0;
 
     #if Soft_Shadow_Quality == OFF
-    shading = step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x);
+    shading = step(shadowCoord.z, texture(shadowtex1, shadowCoord.xy).x);
     #else
 
     #if Soft_Shadow_Quality == Ultra
@@ -54,7 +54,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal, in 
         float r = pow(float(i + 1) * invsteps, 0.75);
         vec2 offset = vec2(cos(a) * r, sin(a) * r) * TexelBlurRadius * 4.0;
 
-        float depth = texture(shadowtex0, shadowCoord.xy + offset).x;
+        float depth = texture(shadowtex1, shadowCoord.xy + offset).x;
 
         if(depth < shadowCoord.z) {
             blocker += depth;
@@ -68,7 +68,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal, in 
         return vec3(1.0);
     }
 
-    float depth = texture(shadowtex0, shadowCoord.xy).x;
+    float depth = texture(shadowtex1, shadowCoord.xy).x;
     float penumbra = (shadowCoord.z - blocker) / blocker / Shadow_Depth_Mul * 32.0;
           penumbra = min(penumbra + 1.0, 16.0) * TexelBlurRadius;
     #endif
@@ -78,7 +78,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal, in 
         float r = pow(float(i + 1) * invsteps, 0.75);
         vec2 offset = vec2(cos(a) * r, sin(a) * r) * penumbra;
 
-        shading += step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy + offset).x);
+        shading += step(shadowCoord.z, texture(shadowtex1, shadowCoord.xy + offset).x);
     }
 
     shading *= invsteps;

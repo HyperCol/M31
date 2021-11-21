@@ -4,6 +4,8 @@ uniform sampler2D tex;
 uniform sampler2D normals;
 uniform sampler2D specular;
 
+in float TileMask;
+
 in vec2 texcoord;
 in vec2 lmcoord;
 
@@ -24,19 +26,44 @@ void main() {
 
     vec2 EncodeNormal = EncodeSpheremap(normal);
 
-    //Misc: emissive heightmap self_shadow solid_block tileMaskID material material_ao
+    float tileMask = round(TileMask);
 
-    //R : albedo.rg
-    //G : albedo.ba
-    //B : smoothness, metallic
-    gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(texture3.rg), 1.0);
+    if(tileMask == Water && !gl_FrontFacing) {
+        discard;
+    }
 
-    //R : light map
-    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(texture3.b, Mask_ID_Water / 255.0), 0.0, 1.0);
+    if(!gl_FrontFacing) {
+        gl_FragData[3] = vec4(EncodeNormal, gl_FragCoord.z, 1.0);
+        gl_FragDepth = gl_FragCoord.z + 1e-5;
+        return;
+    }else{
+        gl_FragData[3] = vec4(0.0);
+        gl_FragDepth = gl_FragCoord.z;
+    }
 
-    //R : textured normal
-    //G : textured normal
-    //B : geometry normal
-    gl_FragData[2] = vec4(EncodeNormal, EncodeSpheremap(normal));
+    float smoothness    = texture3.r;
+    float metallic      = max(0.02, texture3.g);
+    float scattering    = 0.9;
+    float absorption    = 0.0;
+
+    if(tileMask == Water) {
+        smoothness = 0.995;
+        metallic = 0.02;
+        scattering = 0.8;
+        absorption = 7.0;
+
+        albedo = vec4(color.rgb, 0.05);
+    }else if(tileMask == Glass || tileMask == GlassPane || tileMask == StainedGlass || tileMask == StainedGlassPane) {
+        metallic = 0.04;
+        scattering = 0.999;
+
+        absorption = tileMask == GlassPane || tileMask == StainedGlassPane ? 31.0 : 7.0;
+    }else {
+        scattering = saturate(rescale((1.0 - albedo.a) * 255.0, 64.0, 319.0));
+    }
+
+    gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(smoothness, metallic), 1.0);
+    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(scattering, Water / 255.0), absorption / 255.0, 1.0);
+    gl_FragData[2] = vec4(EncodeNormal, tileMask / 65535.0, 1.0);
 }
-/* DRAWBUFFERS:012 */
+/* DRAWBUFFERS:0124 */

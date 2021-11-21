@@ -45,6 +45,11 @@
 //#define Disabled_Sky_Occlusion
 #define Sky_Light_Level_Min 0                       //[0 1 2 3 4 5 6 7 8 9 10 11 12 13 14]
 
+//Materials
+#define Small_SlimeBlock_Removal                    //TODO
+
+#define Translucent_Blocks_Quality High             //[Medium High]
+
 //Atmosphere
 #define Atmospheric_Shape Sphere                    //[Sphere Cube]
 

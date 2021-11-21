@@ -15,11 +15,13 @@
 #define MaskIDStemPlants 6.0
 //#define MaskIDStem 
 
-#define MaskIDWater 8.0
 #define Water 8.0
 #define Ice 79.0
-#define Slime 165.0
+#define SlimeBlock 165.0
 #define Glass 20.0
+#define GlassPane 102.0         //only in gbuffers_water
+#define StainedGlass 95.0       //only in gbuffers_water
+#define StainedGlassPane 160.0  //only in gbuffers_water
 
 #ifdef Include_Gbuffers_Data
 

@@ -19,6 +19,8 @@ uniform int frameCounter;
 uniform int heldBlockLightValue;
 uniform int heldBlockLightValue2;
 
+uniform int isEyeInWater;
+
 vec2 resolution = vec2(viewWidth, viewHeight);
 vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
@@ -28,8 +30,9 @@ float ExpToLinerDepth(float depth) {
 }
 
 float LinerToExpDepth(float linerDepth) {
-    float expDepth = (far + near - 2.0 * far * near / linerDepth) / (near - far);
-    return expDepth * 0.5 + 0.5;
+    vec2 expDepth = mat2(gbufferProjection[2].zw, gbufferProjection[3].zw) * vec2(-linerDepth, 1.0);
+
+    return (expDepth.x / expDepth.y) * 0.5 + 0.5;
 }
 
 #if defined(MC_VERSION)

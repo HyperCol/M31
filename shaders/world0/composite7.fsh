@@ -4,6 +4,7 @@ uniform sampler2D composite;
 uniform sampler2D colortex7;
 
 uniform sampler2D depthtex0;
+uniform sampler2D depthtex1;
 
 in vec2 texcoord;
 /*

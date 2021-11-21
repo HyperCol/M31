@@ -6,10 +6,12 @@
 #include "/libs/common.glsl"
 #include "/libs/volumetric/atmospheric_common.glsl"
 
+#if !defined(MC_VERSION)
 uniform vec3 upPosition;
 uniform vec3 sunPosition;
 uniform vec3 moonPosition;
 uniform vec3 shadowLightPosition;
+#endif
 
 vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint, float sampleHeight) {
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, L, vec3(0.0), atmosphere_radius);
@@ -73,6 +75,7 @@ void main() {
 
     texcoord = gl_MultiTexCoord0.xy;
 
+    #if !defined(MC_VERSION)
     lightVector = normalize(shadowLightPosition);
     worldLightVector = normalize(mat3(gbufferModelViewInverse) * shadowLightPosition);
 
@@ -84,6 +87,7 @@ void main() {
 
     upVector = normalize(upPosition);
     worldUpVector = vec3(0.0, 1.0, 0.0);
+    #endif
 
     //make sure samplePosition.y > planet_radius
     vec3 samplePosition = vec3(0.0, planet_radius + 1.0, 0.0);

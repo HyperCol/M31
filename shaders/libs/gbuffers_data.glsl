@@ -76,26 +76,6 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     m.tile_mask     = round(unpack2x8Y(tex1.y) * 255.0);
     m.opaque        = 1.0;
 
-    m.smoothness    = tex0_b.r;
-    m.metallic      = tex0_b.g;
-    m.F0            = mix(vec3(m.metallic), m.albedo, step(0.9, m.metallic));
-    m.roughness     = pow2(1.0 - m.smoothness);
-
-    m.material      = unpack2x8Y(tex1.y) * 255.0;
-    m.metal         = step(Metal_Check, m.metallic);
-    m.impermeable   = step(m.material, 0.001);
-    m.porosity      = m.material / 64.0 * step(m.material, 64.5);
-    m.scattering    = vec3(0.0);
-    m.absorption    = vec3(0.0);
-    m.transmittance = m.scattering + m.absorption;
-
-    m.lightmap      = saturate((unpack2x8(tex1.r) * 17.0 - 1.0) / 15.0);
-    m.emissive      = floor(unpack2x8X(tex1.b) * 255.0); m.emissive = m.emissive / 254.0 * step(m.emissive, 254.5);
-    m.material_ao   = 0.0;//unpack2x8Y(tex1.b);
-
-    m.texturedNormal    = DecodeSpheremap(tex2.rg);
-    m.geometryNormal    = DecodeSpheremap(tex2.ba);
-
     //m.maskSky = 
     
     m.maskHand = MaskCheck(m.tile_mask, MaskIDHand);
@@ -106,7 +86,28 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     //m.maskStemPlants;
     //m.maskStem;
 
-    m.maskWater = MaskCheck(m.tile_mask, MaskIDWater);
+    m.maskWater = MaskCheck(m.tile_mask, Water);
+
+    m.smoothness    = tex0_b.r;
+    m.metallic      = tex0_b.g;
+    m.F0            = mix(vec3(m.metallic), m.albedo, step(0.9, m.metallic));
+    m.roughness     = pow2(1.0 - m.smoothness);
+
+    m.material      = unpack2x8X(tex1.y) * 255.0;
+    m.metal         = step(Metal_Check, m.metallic);
+    m.impermeable   = step(m.material, 0.001);
+    m.porosity      = m.material / 64.0 * step(m.material, 64.5);
+    m.scattering    = vec3((1.0 - saturate(rescale(m.material, 65.0, 255.0))) * 16.0 * m.alpha);
+    //m.absorption    = m.maskWater > 0.9 ? (1.0 - pow(clamp(m.albedo, vec3(0.05), vec3(0.95)), vec3(1.0 / 2.718))) * (texture(colortex1, coord).z * 255.0 * m.alpha) : vec3(0.0);
+    m.absorption    = m.maskWater > 0.9 ? (1.0 - clamp(pow(m.albedo + 1e-5, vec3(1.0 / 2.718)), vec3(1e-3), vec3(0.9))) * (texture(colortex1, coord).z * 255.0 * m.alpha) : vec3(0.0);
+    m.transmittance = m.scattering + m.absorption;
+
+    m.lightmap      = saturate((unpack2x8(tex1.r) * 17.0 - 1.0) / 15.0);
+    m.emissive      = floor(unpack2x8X(tex1.b) * 255.0); m.emissive = m.emissive / 254.0 * step(m.emissive, 254.5);
+    m.material_ao   = 0.0;//unpack2x8Y(tex1.b);
+
+    m.texturedNormal    = DecodeSpheremap(tex2.rg);
+    m.geometryNormal    = DecodeSpheremap(tex2.ba);
 
     #ifdef Disabled_Sky_Occlusion
         m.lightmap.y = 1.0;
@@ -121,6 +122,7 @@ Gbuffers GetGbuffersData(in vec2 coord) {
 
 struct Vector {
     float depth;
+    float linearDepth;
 
     float viewLength;
 
@@ -138,6 +140,7 @@ Vector GetVector(in vec2 coord, sampler2D depthtex) {
     Vector v;
 
     v.depth = texture(depthtex, coord).x;
+    v.linearDepth = ExpToLinerDepth(v.depth);
 
     v.vP = nvec3(gbufferProjectionInverse * nvec4(vec3(ApplyTAAJitter(coord), v.depth) * 2.0 - 1.0));
 
