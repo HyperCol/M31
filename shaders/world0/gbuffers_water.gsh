@@ -32,7 +32,7 @@ float sdBox( vec3 p, vec3 b ) {
 }
 
 void main() {
-    bool selectBlock = vTileMask[0] == SlimeBlock;
+    bool selectBlock = vTileMask[0] == SlimeBlock || vTileMask[0] == HoneyBlock;
 
     vec3 worldNormal = mat3(gbufferModelViewInverse) * vnormal[0];
     vec3 trainglePosition = (worldPosition[0] + worldPosition[1] + worldPosition[2]) / 3.0 + cameraPosition;

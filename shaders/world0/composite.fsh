@@ -3,12 +3,27 @@
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
 
+float t(in float z){
+  if(0.0 <= z && z < 0.5) return 2.0*z;
+  if(0.5 <= z && z < 1.0) return 2.0 - 2.0*z;
+  return 0.0;
+}
+
+float R2Dither(in vec2 coord){
+  float a1 = 1.0 / 0.75487766624669276;
+  float a2 = 1.0 / 0.569840290998;
+
+  return mod(coord.x * a1 + coord.y * a2, 1.0);
+}
+
 #include "/libs/setting.glsl"
 #include "/libs/common.glsl"
 #include "/libs/uniform.glsl"
 #include "/libs/vertex_data_inout.glsl"
 #include "/libs/gbuffers_data.glsl"
 #include "/libs/lighting/brdf.glsl"
+#include "/libs/lighting/shadowmap_common.glsl"
+#include "/libs/lighting/shadowmap.glsl"
 
 struct WaterData {
     float istranslucent;
@@ -18,7 +33,8 @@ struct WaterData {
 
     float water;
     //float ice;
-    //float slime;
+    float slime_block;
+    float honey_block;
     //float glass;
     ////float glass_pane;
     ////float stained_glass;
@@ -33,6 +49,8 @@ WaterData GetWaterData(in vec2 coord) {
 
     w.TileMask  =  round(texture(colortex2, coord).b * 65535.0);
     w.water     = MaskCheck(w.TileMask, Water);
+    w.slime_block = MaskCheck(w.TileMask, SlimeBlock);
+    w.honey_block = MaskCheck(w.TileMask, HoneyBlock);
 
     return w;
 }
@@ -55,6 +73,13 @@ WaterBackface GetWaterBackfaceData(in vec2 coord) {
 }
 
 void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Vector v, in Vector v1, in vec2 coord) {
+    vec3 worldNormal = mat3(gbufferModelViewInverse) * m.texturedNormal;
+    vec3 worldPosition = v.wP + cameraPosition;
+    vec3 blockCenter = floor(worldPosition - worldNormal * 0.1) + 0.5;
+
+    //float maxDistance = maxComponent(abs(v.wP + cameraPosition - blockCenter));
+    //color = maxDistance < 0.25 ? vec3(0.0) : color;
+
     if(t.istranslucent > 0.9) {
     vec3 SunDiffuse = DiffuseLighting(m, lightVector, v.eyeDirection) * SunLightingColor * shadowFade;
     vec3 SunSpecular = SpecularLighting(m, lightVector, v.eyeDirection) * SunLightingColor * shadowFade;
@@ -62,11 +87,14 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
 
     WaterBackface back = GetWaterBackfaceData(coord);
 
+    float dither = R2Dither(ApplyTAAJitter(texcoord) * resolution);
+    //if(t.water > 0.1) dither = mix(dither, 1.0, 0.5);
+
     if(m.maskWater > 0.9) {
         float rayLength = max(0.0, back.linearDepth - v.linearDepth);
 
-        vec3 colorTransmittance = exp(-rayLength * (m.transmittance));
-        color *= colorTransmittance;
+        //vec3 colorTransmittance = exp(-rayLength * (m.transmittance));
+        //color *= colorTransmittance;
 
         int steps = 12;
         float invsteps = 1.0 / float(steps);
@@ -75,22 +103,40 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
         vec3 transmittance = vec3(1.0);
 
         float stepLength = length(nvec3(gbufferProjectionInverse * nvec4(vec3(texcoord, back.depth) * 2.0 - 1.0))) - v.viewLength;
-              stepLength *= invsteps;
-        //if(stepLength <= 1e-5) return;
+
+        if(stepLength > 1e-5) {
+            stepLength = stepLength + m.alpha * 0.5;
+            stepLength *= invsteps;
 
         vec3 rayOrigin = v.wP;
         vec3 rayDirection = v.worldViewDirection * stepLength;
 
-        float phase = HG(dot(lightVector, v.viewDirection), 0.5);
+        rayOrigin += rayDirection * dither;
+
+        float phase = mix(HG(dot(lightVector, v.viewDirection), -0.1), HG(dot(lightVector, v.viewDirection), 0.5), 0.3);
 
         vec3 SunLight = SunLightingColor * phase;
 
         for(int i = 0; i < steps; i++) {
-            vec3 L = SunLight;
+            vec3 shadowCoord = WorldPositionToShadowCoord(rayOrigin);
+            float visibility = step(shadowCoord.z - shadowTexelSize * 0.1, texture(shadowtex1, shadowCoord.xy).x);
 
-            vec3 stepTransmittance = exp(-stepLength * m.transmittance);
+            vec3 L = SunLight * visibility;
 
-            scattering += (L - L * stepTransmittance) * transmittance;
+            float density = 1.0;
+
+            float maxDistance = maxComponent(abs(rayOrigin + cameraPosition - blockCenter));
+
+            if(t.slime_block > 0.9) {
+                density += (maxDistance < 0.3125 ? 8.0 : 0.0);
+            }else if(t.honey_block > 0.9) {
+                density += (maxDistance < 0.4375 ? 8.0 : 0.0);
+            }
+
+            //vec3 stepTransmittance = exp(-stepLength * (m.absorption + m.scattering * density));
+            vec3 stepTransmittance = exp(-stepLength * density * m.transmittance);
+
+            scattering += (L - L * stepTransmittance) * transmittance / (density * 2.0) * density;
             transmittance *= stepTransmittance;
 
             rayOrigin += rayDirection;
@@ -98,7 +144,9 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
 
         float alpha = invPi;
 
+        color *= transmittance;
         color += (scattering / m.transmittance * m.scattering * m.albedo) * alpha;
+        }
 
         vec3 s = m.scattering  * 0.01;
 
@@ -110,8 +158,9 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
         color *= (1.0 - m.metallic) * (1.0 - m.metal);
     }
 
-    color += SunSpecular + SunDiffuse;
+    vec3 shading = vec3(1.0);//CalculateShading(vec3(texcoord, v.depth), lightVector, m.geometryNormal, 0.0);
 
+    color += SunSpecular * shading + SunDiffuse * shading;
     color += BlocksLight;
     }
 }

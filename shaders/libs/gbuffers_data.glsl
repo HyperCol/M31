@@ -98,7 +98,6 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     m.impermeable   = step(m.material, 0.001);
     m.porosity      = m.material / 64.0 * step(m.material, 64.5);
     m.scattering    = vec3((1.0 - saturate(rescale(m.material, 65.0, 255.0))) * 16.0 * m.alpha);
-    //m.absorption    = m.maskWater > 0.9 ? (1.0 - pow(clamp(m.albedo, vec3(0.05), vec3(0.95)), vec3(1.0 / 2.718))) * (texture(colortex1, coord).z * 255.0 * m.alpha) : vec3(0.0);
     m.absorption    = m.maskWater > 0.9 ? (1.0 - clamp(pow(m.albedo + 1e-5, vec3(1.0 / 2.718)), vec3(1e-3), vec3(0.9))) * (texture(colortex1, coord).z * 255.0 * m.alpha) : vec3(0.0);
     m.transmittance = m.scattering + m.absorption;
 
@@ -107,7 +106,7 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     m.material_ao   = 0.0;//unpack2x8Y(tex1.b);
 
     m.texturedNormal    = DecodeSpheremap(tex2.rg);
-    m.geometryNormal    = DecodeSpheremap(tex2.ba);
+    m.geometryNormal    = m.maskWater < 0.9 ? DecodeSpheremap(tex2.ba) : m.texturedNormal;
 
     #ifdef Disabled_Sky_Occlusion
         m.lightmap.y = 1.0;

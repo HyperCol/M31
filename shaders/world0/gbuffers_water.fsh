@@ -4,6 +4,8 @@ uniform sampler2D tex;
 uniform sampler2D normals;
 uniform sampler2D specular;
 
+uniform sampler2D colortex4;
+
 in float TileMask;
 
 in vec2 texcoord;
@@ -20,6 +22,11 @@ in vec4 color;
 #include "/libs/mask_check.glsl"
 
 void main() {
+    #if MC_VERSION < 11500
+        //fix particles
+        if(texture(colortex4, gl_FragCoord.xy * texelSize).z < gl_FragCoord.z) discard;
+    #endif
+
     vec4 albedo = texture(tex, texcoord) * color;
     vec4 texture2 = texture(normals, texcoord);
     vec4 texture3 = texture(specular, texcoord);
@@ -53,14 +60,24 @@ void main() {
         absorption = 7.0;
 
         albedo = vec4(color.rgb, 0.05);
-    }else if(tileMask == Glass || tileMask == GlassPane || tileMask == StainedGlass || tileMask == StainedGlassPane) {
+    } else if(tileMask == Glass || tileMask == GlassPane) {
+
+    } else if(tileMask == StainedGlass || tileMask == StainedGlassPane) {
         metallic = 0.04;
         scattering = 0.999;
 
-        absorption = tileMask == GlassPane || tileMask == StainedGlassPane ? 31.0 : 7.0;
-    }else {
-        scattering = saturate(rescale((1.0 - albedo.a) * 255.0, 64.0, 319.0));
+        absorption = tileMask == GlassPane || tileMask == StainedGlassPane ? 15.0 : 7.0;
+    } else if(tileMask == TintedGlass) {
+        scattering = 0.125;
+    } else if(tileMask == SlimeBlock) {
+        scattering = 0.6;
+    } else if(tileMask == HoneyBlock) {
+        scattering = 0.6;
+    } else {
+        scattering = 1.0 - albedo.a;
     }
+
+    scattering = (scattering * 190.0 + 65.0) / 255.0;
 
     gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(smoothness, metallic), 1.0);
     gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(scattering, Water / 255.0), absorption / 255.0, 1.0);

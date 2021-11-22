@@ -18,10 +18,12 @@
 #define Water 8.0
 #define Ice 79.0
 #define SlimeBlock 165.0
+#define HoneyBlock 166.0
+#define TintedGlass 167.0
 #define Glass 20.0
-#define GlassPane 102.0         //only in gbuffers_water
-#define StainedGlass 95.0       //only in gbuffers_water
-#define StainedGlassPane 160.0  //only in gbuffers_water
+#define GlassPane 102.0
+#define StainedGlass 95.0
+#define StainedGlassPane 160.0
 
 #ifdef Include_Gbuffers_Data
 

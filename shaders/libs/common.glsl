@@ -85,6 +85,12 @@ float unpack2x8X(in float packge) {
 float unpack2x8Y(in float packge) {
     return (1.0 / 255.0) * floor(packge * (256.0));
 }
+
+vec2 unpack2x4(in float x) {
+    x *= 255.0;
+    return vec2(mod(x, 16.0), floor(x / 16.0)) / 15.0;
+}
+
 /*
 float pack2x16(in vec2 x) {
     float pack = dot(round(x * 65535.0), vec2(1.0, 65536.0));
@@ -151,10 +157,8 @@ vec2 RaySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter,
 }
 
 vec2 IntersectCube(vec3 rayOrigin, in vec3 rayDirection, in vec3 shapeCenter, in vec3 size) {
-    shapeCenter = rayOrigin - shapeCenter;
-
     vec3 dr = 1.0 / rayDirection;
-    vec3 n = shapeCenter * dr;
+    vec3 n = (rayOrigin - shapeCenter) * dr;
     vec3 k = size * abs(dr);
 
     vec3 pin = -k - n;
@@ -163,7 +167,7 @@ vec2 IntersectCube(vec3 rayOrigin, in vec3 rayDirection, in vec3 shapeCenter, in
     float near = max(pin.x, max(pin.y, pin.z));
     float far = min(pout.x, min(pout.y, pout.z));
 
-    if(far > near || far > 0.0) {
+    if(far > near && far > 0.0) {
         return vec2(near, far);
     }else{
         return vec2(-1.0);

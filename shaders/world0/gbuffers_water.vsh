@@ -30,15 +30,19 @@ out vec4 color;
 #include "/libs/mask_check.glsl"
 
 void main() {
+    /*
     TileMask = 0.0;
-
+    
     if(mc_Entity.x == Water) TileMask = Water;
     if(mc_Entity.x == Ice) TileMask = Ice;
     if(mc_Entity.x == SlimeBlock) TileMask = SlimeBlock;
+    if(mc_Entity.x == TintedGlass) TileMask = TintedGlass;
     if(mc_Entity.x == Glass) TileMask = Glass;
     if(mc_Entity.x == GlassPane) TileMask = GlassPane;
     if(mc_Entity.x == StainedGlass) TileMask = StainedGlass;
     if(mc_Entity.x == StainedGlassPane) TileMask = StainedGlassPane;
+    */
+    TileMask = mc_Entity.x;
 
     gl_Position = ftransform();
     ApplyTAAJitter(gl_Position);
