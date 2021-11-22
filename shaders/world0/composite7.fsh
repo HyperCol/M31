@@ -64,7 +64,7 @@ vec4 ReprojectSampler(in sampler2D tex, in vec2 pixelPos){
     vec2 f2 = f * f;
     vec2 f3 = f * f2;
 
-    float c = 0.5;
+    float c = 0.65;
     vec2 w0 =         -c  *  f3 + 2.0 * c          *  f2 - c  *  f;
     vec2 w1 =  (2.0 - c)  *  f3 - (3.0 - c)        *  f2            + 1.0;
     vec2 w2 = -(2.0 - c)  *  f3 + (3.0 - 2.0 * c)  *  f2 + c  *  f;
@@ -168,7 +168,7 @@ void main() {
     float blend = 0.987 * InScreen;
 
     vec3 v = YCoCgToRGB(variance);
-    blend -= step(0.05, velocityLength) * 0.1 * saturate(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.5, 1.0));
+    blend -= step(0.05, velocityLength) * 0.05;// * saturate(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.5, 1.0));
 
     vec3 accumulation = clipToAABB(previousColor, minColor, maxColor);
          accumulation = mix(currentColor, accumulation, vec3(blend));
