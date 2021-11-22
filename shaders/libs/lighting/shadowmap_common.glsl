@@ -45,3 +45,12 @@ vec3 ConvertToShadowCoord(in vec3 p) {
 vec3 RemapShadowCoord(in vec3 coord) {
     return vec3(coord.xy, coord.z * Shadow_Depth_Mul);
 }
+
+vec3 WorldPositionToShadowCoord(in vec3 p) {
+    vec3 shadowCoord = ConvertToShadowCoord(p);
+    shadowCoord.xy *= ShadowMapDistortion(shadowCoord.xy);
+    shadowCoord = RemapShadowCoord(shadowCoord);
+    shadowCoord = shadowCoord * 0.5 + 0.5;
+
+    return shadowCoord;
+}
