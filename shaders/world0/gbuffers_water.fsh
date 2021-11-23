@@ -57,11 +57,11 @@ void main() {
         smoothness = 0.995;
         metallic = 0.02;
         scattering = 0.8;
-        absorption = 7.0;
+        absorption = 5.0;
 
         albedo = vec4(color.rgb, 0.05);
     } else if(tileMask == Glass || tileMask == GlassPane) {
-
+        metallic = 0.04;
     } else if(tileMask == StainedGlass || tileMask == StainedGlassPane) {
         metallic = 0.04;
         scattering = 0.999;
@@ -70,7 +70,7 @@ void main() {
     } else if(tileMask == TintedGlass) {
         scattering = 0.125;
     } else if(tileMask == SlimeBlock) {
-        scattering = 0.6;
+        scattering = 0.4;
     } else if(tileMask == HoneyBlock) {
         scattering = 0.6;
     } else {

@@ -20,7 +20,7 @@ void main() {
 
     if(tileMask == Water) {
         scattering = 0.8;
-        absorption = 7.0;
+        absorption = 5.0;
 
         albedo = vec4(color.rgb, 0.05);
     } else if(tileMask == Glass || tileMask == GlassPane) {
@@ -31,12 +31,14 @@ void main() {
     } else if(tileMask == TintedGlass) {
         scattering = 0.125;
     } else if(tileMask == SlimeBlock) {
-        scattering = 0.6;
+        scattering = 0.4;
     } else if(tileMask == HoneyBlock) {
         scattering = 0.6;
     } else {
         scattering = 1.0 - albedo.a;
     }
+
+    if(albedo.a > 0.0) albedo.a = albedo.a + 0.2;
 
     //scattering = (scattering * 190.0 + 65.0) / 255.0;
     absorption = absorption / 15.0;

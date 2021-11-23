@@ -3,7 +3,7 @@ vec3 CalculateShadowVisbility(in vec3 coord) {
     float v1 = step(coord.z, texture(shadowtex1, coord.xy).x);
 
     vec3 albedo = LinearToGamma(texture(shadowcolor0, coord.xy).rgb);
-    float alpha = texture(shadowcolor0, coord.xy).a;
+    float alpha = max(0.0, texture(shadowcolor0, coord.xy).a - 0.2) / 0.8;
     vec2 coe = unpack2x4(texture(shadowcolor1, coord.xy).a);
     
     float absorption = saturate(coe.x * 15.0 * alpha * 0.25);
@@ -11,40 +11,7 @@ vec3 CalculateShadowVisbility(in vec3 coord) {
 
     return mix(vec3(1.0), mix(vec3(1.0), albedo, vec3(absorption)) * (1.0 - scattering), vec3(max(0.0, v1 - v0))) * v1;
 }
-/*
-float FoundBlocker(in vec3 coord, in float TexelBlurRadius, in float dither) {
-    //return 0.125 * Soft_Shadow_Penumbra / Shadow_Depth_Mul;
-    float blocker = 0.0;
-    int blockerCount = 0;
 
-    float blocker2 = 0.0;
-    int blocker2Count = 0;
-
-    for(int i = 0; i < steps; i++) {
-        float a = (float(i) + dither) * (sqrt(5.0) - 1.0) * Pi;
-        float r = pow(float(i + 1) * invsteps, 0.75);
-        vec2 offset = vec2(cos(a) * r, sin(a) * r) * TexelBlurRadius * 4.0;
-
-        float depth = texture(shadowtex1, coord.xy + offset).x;
-
-        if(depth < coord.z) {
-            blocker += depth;
-            blockerCount++;
-        }
-    }
-
-    if(blockerCount > 0) {
-        blocker /= float(blockerCount);
-    }else{
-        return -1.0;
-    }
-
-    float penumbra = (coord.z - blocker) / blocker / Shadow_Depth_Mul * 32.0;
-          penumbra = min(penumbra + 1.0, 16.0);
-
-    return penumbra;
-}
-*/
 vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal, in float material_bias) {
     float ndotl = dot(lightDirection, normal);
     if(ndotl < 0.0 && material_bias < 1e-5) return vec3(0.0);
