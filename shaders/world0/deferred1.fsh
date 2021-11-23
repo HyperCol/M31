@@ -110,7 +110,7 @@ float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirectio
     float dist = ExpToLinerDepth(v.depth);
     float distanceStepLength = clamp((dist - shadowDistance * 0.5) / 2.0, 1.0, 16.0);
 
-    vec3 bias = LightDirection / dot(LightDirection, m.geometryNormal) * dist / 500.0;
+    vec3 bias = m.geometryNormal / dot(LightDirection, m.geometryNormal) * dist / 500.0;
 
     float dither = R2Dither(ApplyTAAJitter(texcoord) * vec2(viewWidth, viewHeight));
 
@@ -159,10 +159,6 @@ vec3 LeavesShading(vec3 L, vec3 eye, vec3 n, vec3 albedo, vec3 sigma_t, vec3 sig
     float ndotl = max(0.0, dot(L, n));
 
     return (R * albedo / sigma_t * sigma_s) * (invPi * phase * (1.0 - ndotl));
-}
-
-vec3 CalculateSky(in vec3 direction) {
-    return vec3(1.0);
 }
 
 void main() {
@@ -269,7 +265,7 @@ void main() {
     //color = GammaToLinear(color);
 
     gl_FragData[0] = vec4(texture(colortex0, texcoord).rgb, 0.0);
-    gl_FragData[1] = vec4(color, 1.0);
+    gl_FragData[1] = vec4(color, maxComponent(shading));
     //gl_FragData[1] = vec4(texture(gnormal, texcoord).zw, v.depth, 1.0);
     gl_FragData[2] = vec4(vec2(0.0), o.depth, 1.0);
 }
