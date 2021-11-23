@@ -1,5 +1,5 @@
 #define Mask_ID_Sky 0.0
-#define Mask_ID_Land 1.0
+//#define Mask_ID_Land 1.0
 #define Mask_ID_Basic 2.0
 #define Mask_ID_Particles 1.0
 #define Mask_ID_World_Border 1.0
@@ -14,6 +14,8 @@
 #define MaskIDDoublePlanetLower 176.0
 #define MaskIDStemPlants 6.0
 //#define MaskIDStem 
+
+#define Land 1.0
 
 #define Water 8.0
 #define Ice 79.0

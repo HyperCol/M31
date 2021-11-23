@@ -27,6 +27,7 @@ struct Gbuffers {
 
     float   tile_mask;
     float   opaque;
+    float   fullBlock;
 
     float   smoothness;
     float   roughness;
@@ -75,6 +76,7 @@ Gbuffers GetGbuffersData(in vec2 coord) {
 
     m.tile_mask     = round(unpack2x8Y(tex1.y) * 255.0);
     m.opaque        = 1.0;
+    m.fullBlock     = step(texture(colortex1, coord).a, 0.5);
 
     //m.maskSky = 
     

@@ -5,6 +5,8 @@ uniform sampler2D normals;
 uniform sampler2D specular;
 
 in float tileMask;
+in float FullSolidBlock;
+in float TileResolution;
 
 in vec2 texcoord;
 in vec2 lmcoord;
@@ -48,7 +50,7 @@ void main() {
     gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(texture3.rg), albedo.a);
 
     //R : light map
-    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(texture3.b, tileMask / 255.0), pack2x8(emissive, texture2.b), 0.0);
+    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(texture3.b, max(Land, round(tileMask)) / 255.0), pack2x8(emissive, texture2.b), 1.0 - FullSolidBlock);
 
     //R : textured normal
     //G : textured normal
