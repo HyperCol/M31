@@ -185,9 +185,9 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
             float maxDistance = maxComponent(abs(rayPosition + cameraPosition - blockCenter));
 
             if(t.slime_block > 0.9) {
-                density += (maxDistance < 0.3125 ? 8.0 : 0.0);
+                density += (maxDistance < 0.3125 ? Small_SlimeBlock_Density : 0.0);
             }else if(t.honey_block > 0.9) {
-                density += (maxDistance < 0.4375 ? 8.0 : 0.0);
+                density += (maxDistance < 0.4375 ? Small_HoneyBlock_Density : 0.0);
             }
 
             vec3 stepTransmittance = exp(-stepLength * density * m.transmittance);
