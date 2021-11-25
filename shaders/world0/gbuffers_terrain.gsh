@@ -39,15 +39,21 @@ uniform ivec2 atlasSize;
 
 #include "/libs/common.glsl"
 
+float sdBox2( vec3 p, vec3 b ) {
+  vec3 q = abs(p) - b;
+  return max(max(q.x,max(q.y,q.z)),0.0);
+}
+
 void main() {
     vec3 worldNormal = mat3(gbufferModelViewInverse) * vnormal[0];
     vec3 trainglePosition = (worldPosition[0] + worldPosition[1] + worldPosition[2]) / 3.0 + cameraPosition;
     vec3 blockCenter = floor(trainglePosition - worldNormal * 0.1) + 0.5;
 
-    vec3 dist3 = vec3(length((worldPosition[0] - worldPosition[1])), length((worldPosition[0] - worldPosition[2])), length((worldPosition[1] - worldPosition[2])));
+    float vertexMinDistance = minComponent(vec3(length((worldPosition[0] - worldPosition[1])), length((worldPosition[0] - worldPosition[2])), length((worldPosition[1] - worldPosition[2]))));
+    float vertexCenterDistance = sdBox2(trainglePosition - blockCenter, vec3(0.0));
 
     FullSolidBlock = 1.0;
-    if(minComponent(dist3) < 1.0 - 1e-3 || sdBox(trainglePosition - blockCenter, vec3(0.0)) < 0.5) FullSolidBlock = 0.0;
+    if(vertexMinDistance < 1.0 - 1e-3 || vertexCenterDistance < 0.5 - 1e-3) FullSolidBlock = 0.0;
 
     vec2 f_atlasSize = vec2(atlasSize);
     vec2 midcoord = vmidcoord[0] * f_atlasSize;
