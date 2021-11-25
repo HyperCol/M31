@@ -76,19 +76,114 @@ vec3 Diffusion(in float depth, in vec3 t) {
     return exp(-depth * t) / (4.0 * Pi * t * max(1.0, depth));
 }
 
+void CalculateSubSurfaceScattering(inout vec3 color, in Gbuffers m, in WaterData t, in Vector v, in vec3 blockCenter, in float backDepth) {
+    int steps = 12;
+    float invsteps = 1.0 / float(steps);
+
+    vec3 scatt = vec3(0.0);
+    vec3 trans = vec3(1.0);
+
+    float dither = R2Dither(ApplyTAAJitter(texcoord) * resolution);
+
+    vec3 viewBorder = vec3( abs(IntersectPlane(vec3(0.0), v.worldViewDirection, vec3(far + 16.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0))),
+                            0.0,
+                            abs(IntersectPlane(vec3(0.0), v.worldViewDirection, vec3(0.0, 0.0, far + 16.0), vec3(0.0, 0.0, 1.0))));
+
+    float end = backDepth;
+    float start = v.viewLength; 
+
+    end = min(min(viewBorder.x, viewBorder.z), end);
+
+    float stepLength = end - start;
+    if(stepLength < 1e-5) return;
+
+    stepLength = stepLength + m.alpha * 0.5;
+    stepLength *= invsteps;
+
+    vec3 rayOrigin = v.wP;
+    vec3 rayDirection = v.worldViewDirection * stepLength;
+
+    vec3 rayPosition = rayOrigin + rayDirection * dither;
+
+    float phase = mix(HG(dot(lightVector, v.viewDirection), -0.1), HG(dot(lightVector, v.viewDirection), 0.5), 0.3);
+
+    vec3 SunLight = SunLightingColor * phase;
+
+    for(int i = 0; i < steps; i++) {
+        vec2 tracingLight = IntersectCube(rayPosition + cameraPosition, worldLightVector, blockCenter, vec3(0.5));
+
+        vec3 lightExtinction = vec3(1.0);
+
+        vec3 shadowViewStepPosition = mat3(shadowModelView) * (rayPosition + (m.fullBlock > 0.5 ? worldLightVector * max(0.05, tracingLight.y) : vec3(0.0))) + shadowModelView[3].xyz;
+        vec3 shadowCoord = vec3(shadowProjection[0].x, shadowProjection[1].y, shadowProjection[2].z) * shadowViewStepPosition + shadowProjection[3].xyz;
+        vec2 shadowCoordOrigin = shadowCoord.xy;
+        float distortion = ShadowMapDistortion(shadowCoord.xy);
+             shadowCoord.xy *= distortion;
+             shadowCoord = RemapShadowCoord(shadowCoord);
+             shadowCoord = shadowCoord * 0.5 + 0.5;
+        float visibility = step(shadowCoord.z - shadowTexelSize, texture(shadowtex1, shadowCoord.xy).x);
+
+        if(m.fullBlock < 0.5) {
+            vec3 shadowViewPosition = vec3(shadowProjectionInverse[0].x, shadowProjectionInverse[1].y, shadowProjectionInverse[2].z) * vec3(shadowCoordOrigin, (texture(shadowtex0, shadowCoord.xy).x * 2.0 - 1.0) / Shadow_Depth_Mul) + shadowProjectionInverse[3].xyz;
+
+            vec3 albedo = LinearToGamma(texture(shadowcolor0, shadowCoord.xy).rgb);
+            float alpha = max(0.0, texture(shadowcolor0, shadowCoord.xy).a - 0.2) / 0.8;
+
+            vec2 coe = unpack2x4(texture(shadowcolor1, shadowCoord.xy).a);
+            float absorption0 = coe.x * 15.0 * alpha;
+            float scattering0 = (1.0 - coe.y) * 16.0 * alpha;
+            vec3 lightViewA = absorption0 * (1.0 - clamp(pow(albedo + 1e-5, vec3(1.0 / 2.718)), vec3(1e-3), vec3(0.9)));
+
+            float opticalDepth = max(length(shadowViewStepPosition - shadowViewPosition) - 0.01, 0.0);
+            lightExtinction = exp(-(lightViewA * opticalDepth + scattering0 * opticalDepth));
+        } else {
+            lightExtinction = exp(-m.transmittance * max(0.0, tracingLight.y));
+        }
+
+        vec3 L = SunLight * lightExtinction * visibility;
+
+        float density = 1.0;
+
+        float maxDistance = maxComponent(abs(rayPosition + cameraPosition - blockCenter));
+
+        if(t.slime_block > 0.9) {
+            density += (maxDistance < 0.3125 ? Small_SlimeBlock_Density : 0.0);
+        }else if(t.honey_block > 0.9) {
+            density += (maxDistance < 0.4375 ? Small_HoneyBlock_Density : 0.0);
+        }
+
+        vec3 stepTransmittance = exp(-stepLength * density * m.transmittance);
+
+        scatt += (L - L * stepTransmittance) * trans / (density * 2.0) * density;
+        trans *= stepTransmittance;
+
+        rayPosition += rayDirection;
+    }
+
+    color *= m.fullBlock > 0.5 ? vec3(1.0) : trans;
+    color += (scatt / m.transmittance * m.scattering * m.albedo) * invPi;
+}
+
 void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Vector v, in Vector v1, in vec2 coord) {
+    WaterBackface back = GetWaterBackfaceData(coord);
+
     vec3 worldNormal = mat3(gbufferModelViewInverse) * m.texturedNormal;
     vec3 worldPosition = v.wP + cameraPosition;
     vec3 blockCenter = floor(worldPosition - worldNormal * 0.1) + 0.5;
-
     vec2 tracing = IntersectCube(worldPosition, v.worldViewDirection, blockCenter, vec3(0.5));
+
+    float formBackFaceDepth = length(nvec3(gbufferProjectionInverse * nvec4(vec3(texcoord, back.depth) * 2.0 - 1.0)));
+    float formVirtualBlock = max(1e-5, tracing.y) + v.viewLength;
+    float backDepth = m.fullBlock > 0.9 ? formVirtualBlock : formBackFaceDepth;
+
+    if(m.material > 64.5 && (m.maskWater > 0.5 || m.fullBlock > 0.5)) {
+        CalculateSubSurfaceScattering(color, m, t, v, blockCenter, backDepth);
+    }
 
     if(t.istranslucent > 0.9) {
     vec3 SunDiffuse = DiffuseLighting(m, lightVector, v.eyeDirection) * SunLightingColor * shadowFade;
     vec3 SunSpecular = SpecularLighting(m, lightVector, v.eyeDirection) * SunLightingColor * shadowFade;
     vec3 BlocksLight = (BlockLightingColor * m.albedo) * (1.0 / 4.0 * Pi) * m.lightmap.x * (m.lightmap.x * m.lightmap.x * m.lightmap.x) * (1.0 - m.metallic) * (1.0 - m.metal) * (1.0 - m.emissive);
-
-    WaterBackface back = GetWaterBackfaceData(coord);
 
     float dither = R2Dither(ApplyTAAJitter(texcoord) * resolution);
     //if(t.water > 0.1) dither = mix(dither, 1.0, 0.5);
@@ -117,7 +212,9 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
 
         color *= mix(depthExtinction, lightExtinction, vec3(step(0.6, texture(colortex3, coord).a)));
     }
+
     if(m.maskWater > 0.9) {
+        /*
         float rayLength = max(0.0, back.linearDepth - v.linearDepth);
 
         //vec3 colorTransmittance = exp(-rayLength * (m.transmittance));
@@ -203,7 +300,7 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
         color *= transmittance;
         color += (scattering / m.transmittance * m.scattering * m.albedo) * alpha;
         }
-
+        */
         vec3 s = m.scattering  * 0.01;
 
         SunDiffuse *= s;
