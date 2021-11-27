@@ -47,7 +47,7 @@ WaterData GetWaterData(in vec2 coord) {
     w.istranslucent = texture(colortex0, coord).a;
     //w.isblocks = 
 
-    w.TileMask  =  round(texture(colortex2, coord).b * 65535.0);
+    w.TileMask  = w.istranslucent > 0.9 ? round(texture(colortex2, coord).b * 65535.0) : 0.0;
     w.water     = MaskCheck(w.TileMask, Water);
     w.slime_block = MaskCheck(w.TileMask, SlimeBlock);
     w.honey_block = MaskCheck(w.TileMask, HoneyBlock);
@@ -92,10 +92,11 @@ void CalculateSubSurfaceScattering(inout vec3 color, in Gbuffers m, in WaterData
     float end = backDepth;
     float start = v.viewLength; 
 
+    if(end <= start) return;
+
     end = min(min(viewBorder.x, viewBorder.z), end);
 
     float stepLength = end - start;
-    if(stepLength < 1e-5) return;
 
     stepLength = stepLength + m.alpha * 0.5;
     stepLength *= invsteps;
@@ -114,7 +115,7 @@ void CalculateSubSurfaceScattering(inout vec3 color, in Gbuffers m, in WaterData
 
         vec3 lightExtinction = vec3(1.0);
 
-        vec3 shadowViewStepPosition = mat3(shadowModelView) * (rayPosition + (m.fullBlock > 0.5 ? worldLightVector * max(0.05, tracingLight.y) : vec3(0.0))) + shadowModelView[3].xyz;
+        vec3 shadowViewStepPosition = mat3(shadowModelView) * (rayPosition + (m.fullBlock > 0.5 ? worldLightVector * max(0.0, tracingLight.y) : vec3(0.0))) + shadowModelView[3].xyz;
         vec3 shadowCoord = vec3(shadowProjection[0].x, shadowProjection[1].y, shadowProjection[2].z) * shadowViewStepPosition + shadowProjection[3].xyz;
         vec2 shadowCoordOrigin = shadowCoord.xy;
         float distortion = ShadowMapDistortion(shadowCoord.xy);
@@ -139,7 +140,7 @@ void CalculateSubSurfaceScattering(inout vec3 color, in Gbuffers m, in WaterData
         } else {
             lightExtinction = exp(-m.transmittance * max(0.0, tracingLight.y));
         }
-
+        
         vec3 L = SunLight * lightExtinction * visibility;
 
         float density = 1.0;
@@ -167,13 +168,13 @@ void CalculateSubSurfaceScattering(inout vec3 color, in Gbuffers m, in WaterData
 void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Vector v, in Vector v1, in vec2 coord) {
     WaterBackface back = GetWaterBackfaceData(coord);
 
-    vec3 worldNormal = mat3(gbufferModelViewInverse) * m.texturedNormal;
+    vec3 worldNormal = mat3(gbufferModelViewInverse) * m.geometryNormal;
     vec3 worldPosition = v.wP + cameraPosition;
     vec3 blockCenter = floor(worldPosition - worldNormal * 0.1) + 0.5;
     vec2 tracing = IntersectCube(worldPosition, v.worldViewDirection, blockCenter, vec3(0.5));
 
     float formBackFaceDepth = length(nvec3(gbufferProjectionInverse * nvec4(vec3(texcoord, back.depth) * 2.0 - 1.0)));
-    float formVirtualBlock = max(1e-5, tracing.y) + v.viewLength;
+    float formVirtualBlock = tracing.y + v.viewLength;
     float backDepth = m.fullBlock > 0.9 ? formVirtualBlock : formBackFaceDepth;
 
     if(m.material > 64.5 && (m.maskWater > 0.5 || m.fullBlock > 0.5)) {

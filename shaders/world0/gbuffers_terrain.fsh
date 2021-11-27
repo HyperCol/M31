@@ -24,9 +24,12 @@ in vec4 color;
 #include "/libs/mask_check.glsl"
 
 void main() {
-    vec4 albedo = texture(tex, texcoord) * color;
+    vec4 baseColor = texture(tex, texcoord);
+    vec4 albedo = baseColor * color;
     vec4 texture2 = texture(normals, texcoord);
     vec4 texture3 = texture(specular, texcoord);
+
+    float emissive = textureLod(specular, texcoord, 0).a;
 
     mat3 tbn = mat3(tangent, binormal, normal);
 
@@ -34,27 +37,36 @@ void main() {
 
     vec3 texturedNormal = vec3(normalTexture * 1.0, sqrt(1.0 - dot(normalTexture.xy, normalTexture.xy)));
          texturedNormal = normalize(tbn * normalize(texturedNormal));
-
     if(maxComponent(texture2.rgb) == 0.0) texturedNormal = normal;
 
-    vec2 EncodeNormal = EncodeSpheremap(texturedNormal);
+    float TileMask = round(tileMask);
 
-    float emissive = textureLod(specular, texcoord, 0).a;
+    vec3 ncolor = normalize(albedo.rgb);
+
+    float material = texture3.b * 255.0;
+
+    float porosity = 0.0;
+    float scattering = 65.0;
+
+    if(material < 65.0) {
+        if(TileMask == Grass || TileMask == Dripleaf) {
+            material = scattering + 180.0;
+        } else if(TileMask == StemPlants) {
+            material = ncolor.g - max(ncolor.r, ncolor.b) > 0.05 ? scattering + 180.0 : 0.0;
+        } else if(TileMask == Leaves) {
+            material = scattering + 160.0;
+        } else if(TileMask == Vine) {
+            material = scattering + 180.0;
+        }
+    }
+
+    material = min(material, 255.0);
 
     //if(albedo.a < Alpha_Test_Reference) discard;
 
-    //Misc: emissive heightmap self_shadow solid_block material_ao
-    //R : albedo.rg
-    //G : albedo.ba
-    //B : smoothness, metallic
+    //Misc: heightmap self_shadow
     gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(texture3.rg), albedo.a);
-
-    //R : light map
-    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(texture3.b, max(Land, round(tileMask)) / 255.0), pack2x8(emissive, texture2.b), 1.0 - FullSolidBlock);
-
-    //R : textured normal
-    //G : textured normal
-    //B : geometry normal
-    gl_FragData[2] = vec4(EncodeNormal, EncodeSpheremap(normal));
+    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(material / 255.0, max(Land, round(tileMask)) / 255.0), pack2x8(emissive, texture2.b), 1.0 - FullSolidBlock);
+    gl_FragData[2] = vec4(EncodeSpheremap(texturedNormal), EncodeSpheremap(normal));
 }
 /* DRAWBUFFERS:012 */

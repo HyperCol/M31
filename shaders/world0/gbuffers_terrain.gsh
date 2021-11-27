@@ -38,10 +38,11 @@ uniform vec3 cameraPosition;
 uniform ivec2 atlasSize;
 
 #include "/libs/common.glsl"
+#include "/libs/mask_check.glsl"
 
 float sdBox2( vec3 p, vec3 b ) {
-  vec3 q = abs(p) - b;
-  return max(max(q.x,max(q.y,q.z)),0.0);
+    vec3 q = abs(p) - b;
+    return max(max(q.x,max(q.y,q.z)),0.0);
 }
 
 void main() {
@@ -54,6 +55,7 @@ void main() {
 
     FullSolidBlock = 1.0;
     if(vertexMinDistance < 1.0 - 1e-3 || vertexCenterDistance < 0.5 - 1e-3) FullSolidBlock = 0.0;
+    if(vTileMask[0] == Vine || vTileMask[0] == Leaves) FullSolidBlock = 0.0;
 
     vec2 f_atlasSize = vec2(atlasSize);
     vec2 midcoord = vmidcoord[0] * f_atlasSize;

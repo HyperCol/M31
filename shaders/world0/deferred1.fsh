@@ -138,27 +138,22 @@ float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirectio
 }
 
 vec3 Diffusion(in float depth, in vec3 t) {
-    depth = max(1e-5, depth);
-
-    return exp(-depth * t) / (4.0 * Pi * t * max(1.0, depth));
+    return exp(-depth * t) / t / (4.0 * Pi);
 }
 
 vec3 LeavesShading(vec3 L, vec3 eye, vec3 n, vec3 albedo, vec3 sigma_t, vec3 sigma_s) {
     albedo = pow(albedo, vec3(0.9));
 
-    //vec2 t = IntersectCube(-worldLightVector, worldLightVector, vec3(0.0), vec3(0.03125 * 0.5));
-    //float depth = max(0.0, t.y - max(0.0, t.x));
+    float depth = 0.01;
 
-    float depth = 0.03125;
-
-    vec3 R = Diffusion(depth, sigma_t);
+    vec3 R = exp(-depth * sigma_t);
 
     float mu = dot(L, -eye);
-    float phase = mix(HG(mu, -0.1), HG(mu, 0.7), 0.3);
+    float phase = mix(HG(mu, -0.1), HG(mu, 0.6), 0.3);
 
     float ndotl = max(0.0, dot(L, n));
 
-    return (R * albedo / sigma_t * sigma_s) * (invPi * phase * (1.0 - ndotl));
+    return (R * albedo * sigma_s) * (invPi / depth * 0.02 * phase * (1.0 - ndotl));
 }
 
 void main() {
@@ -170,12 +165,16 @@ void main() {
 
     vec3 color = vec3(0.0);
 
-    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal, m.maskLeaves + m.maskGrass * 2.0);
-         shading *= ScreenSpaceContactShadow(m, o, lightVector, m.maskLeaves + m.maskGrass);
+    float simplesss = m.fullBlock < 0.5 && m.material > 65.0 ? 1.0 : 0.0;
 
-    vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection);
-         sunLight += SpecularLighting(m, lightVector, o.eyeDirection);
-         sunLight += LeavesShading(lightVector, o.eyeDirection, m.texturedNormal, m.albedo.rgb, vec3(0.05), vec3(0.05)) * (m.maskGrass + m.maskLeaves);
+    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal, simplesss + m.maskGrass);
+         shading *= ScreenSpaceContactShadow(m, o, lightVector, simplesss);
+
+    vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection) + SpecularLighting(m, lightVector, o.eyeDirection);
+
+    if(simplesss > 0.5 && m.material > 65.0) {
+        sunLight += LeavesShading(lightVector, o.eyeDirection, m.texturedNormal, m.albedo.rgb, m.transmittance, m.scattering);
+    }
 
     color += sunLight * LightingColor * shading * shadowFade;
 
