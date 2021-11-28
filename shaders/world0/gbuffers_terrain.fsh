@@ -52,9 +52,11 @@ void main() {
         if(TileMask == Grass || TileMask == Dripleaf) {
             material = scattering + 180.0;
         } else if(TileMask == StemPlants) {
-            material = ncolor.g - max(ncolor.r, ncolor.b) > 0.05 ? scattering + 180.0 : 0.0;
+            float flower = step(0.3, maxComponent(albedo.rgb));
+
+            material = ncolor.g - max(ncolor.r, ncolor.b) + flower > 0.05 ? scattering + 180.0 : 0.0;
         } else if(TileMask == Leaves) {
-            material = scattering + 160.0;
+            material = scattering + 200.0;
         } else if(TileMask == Vine) {
             material = scattering + 180.0;
         }

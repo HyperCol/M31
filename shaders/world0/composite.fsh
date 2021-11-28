@@ -181,13 +181,38 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
         CalculateSubSurfaceScattering(color, m, t, v, blockCenter, backDepth);
     }
 
-    if(t.istranslucent > 0.9) {
-    vec3 SunDiffuse = DiffuseLighting(m, lightVector, v.eyeDirection) * SunLightingColor * shadowFade;
-    vec3 SunSpecular = SpecularLighting(m, lightVector, v.eyeDirection) * SunLightingColor * shadowFade;
-    vec3 BlocksLight = (BlockLightingColor * m.albedo) * (1.0 / 4.0 * Pi) * m.lightmap.x * (m.lightmap.x * m.lightmap.x * m.lightmap.x) * (1.0 - m.metallic) * (1.0 - m.metal) * (1.0 - m.emissive);
+if(t.istranslucent > 0.9) {
+    vec3 diffuse = DiffuseLighting(m, lightVector, v.eyeDirection);
+    vec3 specular = SpecularLighting(m, lightVector, v.eyeDirection);
+    vec3 BlocksLight = (m.albedo) * (0.25 * Pi * m.lightmap.x * (m.lightmap.x * m.lightmap.x * m.lightmap.x) * (1.0 - m.metallic) * (1.0 - m.metal) * (1.0 - m.emissive));
 
-    float dither = R2Dither(ApplyTAAJitter(texcoord) * resolution);
-    //if(t.water > 0.1) dither = mix(dither, 1.0, 0.5);
+    vec3 heldLightDiffuse = vec3(0.0);
+    vec3 heldLightSpecluar = vec3(0.0);
+
+    #if Held_Light_Quality == High
+        vec3 handOffset = nvec3(gbufferProjectionInverse * nvec4(vec3(1.0, 0.5, 0.0) * 2.0 - 1.0)) * vec3(1.0, 1.0, 0.0);
+        if(m.tile_mask == MaskIDHand) handOffset = vec3(0.0);
+
+        vec3 lP1 = o.vP - handOffset * 4.0;
+        vec3 lP2 = o.vP + handOffset * 4.0;
+
+        float heldLightDistance1 = min(3.0, 1.0 / pow2(length(lP1))) * float(heldBlockLightValue) / 15.0 * 6.0;
+        float heldLightDistance2 = min(3.0, 1.0 / pow2(length(lP2))) * float(heldBlockLightValue2) / 15.0 * 6.0;
+
+        lP1 = normalize(lP1);
+        lP2 = normalize(lP2);
+
+        heldLightSpecluar += SpecularLighting(m, -lP1, v.eyeDirection) * heldLightDistance1;
+        heldLightDiffuse  += DiffuseLighting(m, -lP1, v.eyeDirection) * max(0.0, rescale(heldLightDistance1, 1e-5, 1.0));
+
+        heldLightSpecluar += SpecularLighting(m, -lP2, v.eyeDirection) * heldLightDistance2;
+        heldLightDiffuse  += DiffuseLighting(m, -lP2, v.eyeDirection) * max(0.0, rescale(heldLightDistance2, 1e-5, 1.0));
+    #else
+        float heldLightDistance = min(3.0, 1.0 / pow2(v.viewLength)) * max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0 * 6.0;
+
+        heldLightSpecluar = SpecularLighting(m, v.eyeDirection, v.eyeDirection) * heldLightDistance;
+        heldLightDiffuse  = DiffuseLighting(m, v.eyeDirection, v.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-5, 1.0));
+    #endif    
 
     if(t.water > 0.1) {
         vec3 shadowViewStepPosition = mat3(shadowModelView) * (v1.wP) + shadowModelView[3].xyz;
@@ -215,109 +240,23 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
     }
 
     if(m.maskWater > 0.9) {
-        /*
-        float rayLength = max(0.0, back.linearDepth - v.linearDepth);
-
-        //vec3 colorTransmittance = exp(-rayLength * (m.transmittance));
-        //color *= colorTransmittance;
-
-        int steps = 12;
-        float invsteps = 1.0 / float(steps);
-
-        vec3 scattering = vec3(0.0);
-        vec3 transmittance = vec3(1.0);
-
-        vec3 viewBorder = vec3( abs(IntersectPlane(vec3(0.0), v.worldViewDirection, vec3(far + 16.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0))),
-                                0.0,
-                                abs(IntersectPlane(vec3(0.0), v.worldViewDirection, vec3(0.0, 0.0, far + 16.0), vec3(0.0, 0.0, 1.0))));
-
-        float end = length(nvec3(gbufferProjectionInverse * nvec4(vec3(texcoord, back.depth) * 2.0 - 1.0)));
-        float start = v.viewLength; 
-
-        end = min(min(viewBorder.x, viewBorder.z), end);
-
-        float stepLength = end - start;
-
-        if(stepLength > 1e-5) {
-            stepLength = stepLength + m.alpha * 0.5;
-            stepLength *= invsteps;
-
-        vec3 rayOrigin = v.wP;
-        vec3 rayDirection = v.worldViewDirection * stepLength;
-
-        vec3 rayPosition = rayOrigin + rayDirection * dither;
-
-        float phase = mix(HG(dot(lightVector, v.viewDirection), -0.1), HG(dot(lightVector, v.viewDirection), 0.5), 0.3);
-
-        vec3 SunLight = SunLightingColor * phase;
-
-        for(int i = 0; i < steps; i++) {
-            vec2 tracingLight = IntersectCube(rayPosition + cameraPosition, worldLightVector, blockCenter, vec3(0.5));
-
-            vec3 shadowViewStepPosition = mat3(shadowModelView) * (rayPosition) + shadowModelView[3].xyz;
-            vec3 shadowCoord = vec3(shadowProjection[0].x, shadowProjection[1].y, shadowProjection[2].z) * shadowViewStepPosition + shadowProjection[3].xyz;
-            vec2 shadowCoordOrigin = shadowCoord.xy;
-            float distortion = ShadowMapDistortion(shadowCoord.xy);
-                 shadowCoord.xy *= distortion;
-                 shadowCoord = RemapShadowCoord(shadowCoord);
-                 shadowCoord = shadowCoord * 0.5 + 0.5;
-            float visibility = step(shadowCoord.z - shadowTexelSize, texture(shadowtex1, shadowCoord.xy).x);
-
-            vec3 shadowViewPosition = vec3(shadowProjectionInverse[0].x, shadowProjectionInverse[1].y, shadowProjectionInverse[2].z) * vec3(shadowCoordOrigin, (texture(shadowtex0, shadowCoord.xy).x * 2.0 - 1.0) / Shadow_Depth_Mul) + shadowProjectionInverse[3].xyz;
-
-            vec3 albedo = LinearToGamma(texture(shadowcolor0, shadowCoord.xy).rgb);
-            float alpha = max(0.0, texture(shadowcolor0, shadowCoord.xy).a - 0.2) / 0.8;
-
-            vec2 coe = unpack2x4(texture(shadowcolor1, shadowCoord.xy).a);
-            float absorption0 = coe.x * 15.0 * alpha;
-            float scattering0 = (1.0 - coe.y) * 16.0 * alpha;
-            vec3 lightViewA = absorption0 * (1.0 - clamp(pow(albedo + 1e-5, vec3(1.0 / 2.718)), vec3(1e-3), vec3(0.9)));
-
-            float opticalDepth = max(length(shadowViewStepPosition - shadowViewPosition) - 0.01, 0.0);
-            vec3 lightExtinction = exp(-(lightViewA * opticalDepth + scattering0 * opticalDepth));
-
-            vec3 L = SunLight * lightExtinction * visibility;
-
-            float density = 1.0;
-
-            float maxDistance = maxComponent(abs(rayPosition + cameraPosition - blockCenter));
-
-            if(t.slime_block > 0.9) {
-                density += (maxDistance < 0.3125 ? Small_SlimeBlock_Density : 0.0);
-            }else if(t.honey_block > 0.9) {
-                density += (maxDistance < 0.4375 ? Small_HoneyBlock_Density : 0.0);
-            }
-
-            vec3 stepTransmittance = exp(-stepLength * density * m.transmittance);
-
-            scattering += (L - L * stepTransmittance) * transmittance / (density * 2.0) * density;
-            transmittance *= stepTransmittance;
-
-            rayPosition += rayDirection;
-        }
-
-        float alpha = invPi;
-
-        color *= transmittance;
-        color += (scattering / m.transmittance * m.scattering * m.albedo) * alpha;
-        }
-        */
         vec3 s = m.scattering  * 0.01;
 
-        SunDiffuse *= s;
-        BlocksLight *= s;
+        diffuse *= s;
+        specular *= s;
+        heldLightDiffuse *= s;
     } else {
         color = (m.albedo * SkyLightingColor) * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * pow2(m.lightmap.y) * m.lightmap.y * invPi);
         color += m.emissive * m.albedo * invPi;
         color *= (1.0 - m.metallic) * (1.0 - m.metal);
     }
 
-    vec3 shading = CalculateShading(vec3(texcoord, v.depth), lightVector, m.geometryNormal, 0.0);
+    vec3 shading = CalculateShading(vec3(texcoord, v.depth), lightVector, m.geometryNormal, 0.0) * SunLightingColor * shadowFade;
 
-    color += SunSpecular * shading;
-    color += SunDiffuse * shading;
-    color += BlocksLight;
-    }
+    color += specular * shading;
+    color += diffuse * shading;
+    color += BlockLightingColor * (BlocksLight + heldLightDiffuse + heldLightSpecluar);
+}
 }
 
 /*

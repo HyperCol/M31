@@ -23,7 +23,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal, in 
     vec3 viewPosition = nvec3(gbufferProjectionInverse * nvec4(vec3(coord.xy, coord.z) * 2.0 - 1.0));
     vec3 worldPosition = mat3(gbufferModelViewInverse) * viewPosition + gbufferModelViewInverse[3].xyz;
 
-    vec3 shadowCoord = ConvertToShadowCoord(worldPosition + worldNormal * pow5(1.0 - saturate(ndotl)) * 0.25);
+    vec3 shadowCoord = ConvertToShadowCoord(worldPosition + worldNormal * pow5(1.0 - abs(ndotl)) * 0.25);
     float distortion = ShadowMapDistortion(shadowCoord.xy);
     shadowCoord.xy *= distortion;
     shadowCoord = RemapShadowCoord(shadowCoord);

@@ -144,16 +144,16 @@ vec3 Diffusion(in float depth, in vec3 t) {
 vec3 LeavesShading(vec3 L, vec3 eye, vec3 n, vec3 albedo, vec3 sigma_t, vec3 sigma_s) {
     albedo = pow(albedo, vec3(0.9));
 
-    float depth = 0.01;
+    float depth = 0.1;
 
-    vec3 R = exp(-depth * sigma_t);
+    vec3 R = exp(-sigma_t * depth);
 
     float mu = dot(L, -eye);
-    float phase = mix(HG(mu, -0.1), HG(mu, 0.6), 0.3);
+    float phase = mix(HG(mu, -0.1), HG(mu, 0.5), 0.7);
 
     float ndotl = max(0.0, dot(L, n));
 
-    return (R * albedo * sigma_s) * (invPi / depth * 0.02 * phase * (1.0 - ndotl));
+    return (R * albedo) * (invPi * phase * (1.0 - ndotl));
 }
 
 void main() {
@@ -167,7 +167,7 @@ void main() {
 
     float simplesss = m.fullBlock < 0.5 && m.material > 65.0 ? 1.0 : 0.0;
 
-    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal, simplesss + m.maskGrass);
+    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal, simplesss * 2.0);
          shading *= ScreenSpaceContactShadow(m, o, lightVector, simplesss);
 
     vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection) + SpecularLighting(m, lightVector, o.eyeDirection);
