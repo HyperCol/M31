@@ -61,7 +61,11 @@ void main() {
 
         albedo = vec4(color.rgb, 0.05);
     } else if(tileMask == Glass || tileMask == GlassPane) {
+        albedo.a = max(albedo.a, 0.005);
+        smoothness = 0.9;
         metallic = 0.04;
+        scattering = 0.999;
+        absorption = 1.0;
     } else if(tileMask == StainedGlass || tileMask == StainedGlassPane) {
         metallic = 0.04;
         scattering = 0.999;
