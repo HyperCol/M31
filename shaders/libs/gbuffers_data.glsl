@@ -78,7 +78,7 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     m.opaque        = 1.0;
     m.fullBlock     = step(texture(colortex1, coord).a, 0.5);
 
-    //m.maskSky = 
+    m.maskSky = MaskCheck(m.tile_mask, Mask_ID_Sky);
     
     m.maskHand = MaskCheck(m.tile_mask, MaskIDHand);
     //m.maskEntities;

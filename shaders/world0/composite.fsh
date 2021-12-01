@@ -296,6 +296,54 @@ vec3 CalculateRefraction(in Gbuffers m, in WaterData w, in Vector v, in Vector v
     return color;
 }
 */
+
+#include "/libs/volumetric/atmospheric_common.glsl"
+
+vec3 CalculateFog(in vec3 color, in vec3 L, in vec3 v, in float densityRayleigh, in float densityMie) {
+    float theta = dot(v, L);
+    float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + theta * theta);
+    float phaseMie = HG(theta, 0.76);
+
+    return color * (mie_scattering * phaseRayleigh * densityRayleigh + rayleigh_scattering * phaseMie * densityMie);    
+}
+
+void LandAtmosphericScattering(inout vec3 color, in Vector v) {
+    float cameraHeight = max(0.0, cameraPosition.y + 1.6 - 63.0);
+    float worldHeight = max(0.0, cameraPosition.y + v.wP.y - 63.0);
+
+    float height = min(worldHeight, cameraHeight);
+
+    float Hr = exp(-height / rayleigh_distribution * Land_Atmospheric_Distribution) * Land_Atmospheric_Density;
+    float Hm = exp(-height / mie_distribution * Land_Atmospheric_Distribution) * Land_Atmospheric_Density;
+
+    vec3 Tr = (rayleigh_scattering + rayleigh_absorption) * Hr;
+    vec3 Tm = (mie_scattering + mie_absorption) * Hm;
+
+    vec3 transmittance = exp(-(Tr + Tm) * v.viewLength);
+
+    color *= transmittance;
+
+    //color = vec3(0.0);
+
+    #if Land_Atmospheric_Scattering_Quality > Low
+    float dither = R2Dither(ApplyTAAJitter(texcoord) * resolution);
+
+    vec3 shadowCoord = ConvertToShadowCoord(v.worldViewDirection * (v.viewLength * mix(1.0, dither, 0.5)));
+    shadowCoord.xy *= ShadowMapDistortion(shadowCoord.xy);
+    shadowCoord = RemapShadowCoord(shadowCoord);
+    shadowCoord = shadowCoord * 0.5 + 0.5;
+    float visibility = step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x);
+
+    Hr *= 0.25 + visibility * 0.75;
+    Hm *= 0.05 + visibility * 0.95;
+    #endif
+
+    vec3 scattering = exp(-(Tr + Tm) * v.viewLength * 0.25) * v.viewLength;
+
+    color += scattering * CalculateFog(SunLightingColor, worldSunVector, v.worldViewDirection, Hr, Hm);
+    color += scattering * CalculateFog(MoonLightingColor, worldMoonVector, v.worldViewDirection, Hr, Hm);
+}
+
 void main() {
     //materials
     Gbuffers m = GetGbuffersData(texcoord);
@@ -310,6 +358,9 @@ void main() {
          color = LinearToGamma(color) * MappingToHDR;
 
     CalculateTranslucent(color, m, t, v0, v1, texcoord);
+
+    if(m.maskSky < 0.5)
+    LandAtmosphericScattering(color, v0);
 
     color = color / (color + 1.0);
     color = GammaToLinear(color);
