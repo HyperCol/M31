@@ -4,6 +4,8 @@ uniform sampler2D tex;
 uniform sampler2D normals;
 uniform sampler2D specular;
 
+uniform ivec2 atlasSize;
+
 in float tileMask;
 in float FullSolidBlock;
 in float TileResolution;

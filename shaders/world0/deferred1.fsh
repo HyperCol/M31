@@ -264,7 +264,7 @@ void main() {
     //color = GammaToLinear(color);
 
     gl_FragData[0] = vec4(texture(colortex0, texcoord).rgb, 0.0);
-    gl_FragData[1] = vec4(color, maxComponent(shading));
+    gl_FragData[1] = vec4(color, texture(colortex1, texcoord).r);
     //gl_FragData[1] = vec4(texture(gnormal, texcoord).zw, v.depth, 1.0);
     gl_FragData[2] = vec4(vec2(0.0), o.depth, 1.0);
 }

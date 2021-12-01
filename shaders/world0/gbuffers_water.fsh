@@ -41,7 +41,7 @@ void main() {
 
     if(!gl_FrontFacing) {
         gl_FragData[3] = vec4(EncodeNormal, gl_FragCoord.z, 1.0);
-        gl_FragDepth = gl_FragCoord.z + 1e-5;
+        gl_FragDepth = gl_FragCoord.z - 1e-5;
         return;
     }else{
         gl_FragData[3] = vec4(0.0);
@@ -56,8 +56,8 @@ void main() {
     if(tileMask == Water) {
         smoothness = 0.995;
         metallic = 0.02;
-        scattering = 0.8;
-        absorption = 5.0;
+        scattering = 0.85;
+        absorption = 3.0;
 
         albedo = vec4(color.rgb, 0.05);
     } else if(tileMask == Glass || tileMask == GlassPane) {

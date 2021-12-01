@@ -19,8 +19,8 @@ void main() {
     float tileMask = round(TileMask);
 
     if(tileMask == Water) {
-        scattering = 0.8;
-        absorption = 5.0;
+        scattering = 0.85;
+        absorption = 3.0;
 
         albedo = vec4(color.rgb, 0.05);
     } else if(tileMask == Glass || tileMask == GlassPane) {

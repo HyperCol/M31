@@ -112,9 +112,10 @@ void CalculateSubSurfaceScattering(inout vec3 color, in Gbuffers m, in WaterData
 
     if(end <= start) return;
 
-    end = min(min(viewBorder.x, viewBorder.z), end);
+    //end = min(min(viewBorder.x, viewBorder.z), end);
 
     float stepLength = end - start;
+    stepLength = min(stepLength, 48.0);
 
     stepLength = stepLength + m.alpha * 0.5;
     stepLength *= invsteps;
@@ -199,28 +200,11 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
     float backDepth = m.fullBlock > 0.9 ? formVirtualBlock : formBackFaceDepth;
 
     if(t.water > 0.1) {
-        vec3 shadowViewStepPosition = mat3(shadowModelView) * (v1.wP) + shadowModelView[3].xyz;
-        vec3 shadowCoord = vec3(shadowProjection[0].x, shadowProjection[1].y, shadowProjection[2].z) * shadowViewStepPosition + shadowProjection[3].xyz;
-        vec2 shadowCoordOrigin = shadowCoord.xy;
-        shadowCoord.xy *= ShadowMapDistortion(shadowCoord.xy);
-        shadowCoord = RemapShadowCoord(shadowCoord);
-        shadowCoord = shadowCoord * 0.5 + 0.5;
+        float tracing1 = abs(IntersectPlane(v1.wP + cameraPosition, v.worldViewDirection, vec3(0.0, blockCenter.y, 0.0), vec3(0.0, 1.0, 0.0)));
+        float tracing2 = max(0.0, IntersectPlane(v1.wP + cameraPosition, worldLightVector, vec3(0.0, blockCenter.y, 0.0), vec3(0.0, 1.0, 0.0)));
+        float depth = mix(tracing1, tracing2, 0.05);
 
-        vec3 shadowViewPosition = vec3(shadowProjectionInverse[0].x, shadowProjectionInverse[1].y, shadowProjectionInverse[2].z) * vec3(shadowCoordOrigin, (texture(shadowtex0, shadowCoord.xy).x * 2.0 - 1.0) / Shadow_Depth_Mul) + shadowProjectionInverse[3].xyz;
-
-        vec3 albedo = LinearToGamma(texture(shadowcolor0, shadowCoord.xy).rgb);
-        float alpha = max(0.0, texture(shadowcolor0, shadowCoord.xy).a - 0.2) / 0.8;
-        vec2 coe = unpack2x4(texture(shadowcolor1, shadowCoord.xy).a);
-    
-        vec3 absorption = (coe.x * 15.0 * alpha) * (1.0 - clamp(pow(albedo + 1e-5, vec3(1.0 / 2.718)), vec3(1e-3), vec3(0.9)));
-        float scattering = (1.0 - coe.y) * 16.0 * alpha;
-
-        float opticalDepth = max(0.0, length(shadowViewStepPosition - shadowViewPosition) - 0.01);
-
-        vec3 depthExtinction = exp(-m.transmittance * max(0.0, v1.viewLength - v.viewLength));
-        vec3 lightExtinction = exp(-(absorption * opticalDepth + scattering * opticalDepth));
-
-        color *= mix(depthExtinction, lightExtinction, vec3(step(0.6, texture(colortex3, coord).a)));
+        color *= (exp(-depth * m.transmittance) + exp(-depth * m.transmittance * 0.25) * 0.7) / (1.7);
     }
 
     float cutoutAlpha = step(m.alpha, 0.2);
@@ -232,60 +216,62 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
     if(m.material > 64.5 && (m.maskWater > 0.5 || m.fullBlock > 0.5)) {
         CalculateSubSurfaceScattering(color, m, t, v, blockCenter, backDepth);
     }
-
-if(t.istranslucent > 0.9) {
-    vec3 diffuse = DiffuseLighting(m, lightVector, v.eyeDirection);
-    vec3 specular = SpecularLighting(m, lightVector, v.eyeDirection);
-    vec3 BlocksLight = (m.albedo) * (0.25 * Pi * m.lightmap.x * (m.lightmap.x * m.lightmap.x * m.lightmap.x) * (1.0 - m.metallic) * (1.0 - m.metal) * (1.0 - m.emissive));
-    vec3 SkyLight = (m.albedo * SkyLightingColor) * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * pow2(m.lightmap.y) * m.lightmap.y * invPi);
-
-    vec3 heldLightDiffuse = vec3(0.0);
-    vec3 heldLightSpecluar = vec3(0.0);
-
-    #if Held_Light_Quality == High
-        vec3 handOffset = nvec3(gbufferProjectionInverse * nvec4(vec3(1.0, 0.5, 0.0) * 2.0 - 1.0)) * vec3(1.0, 1.0, 0.0);
-        if(m.tile_mask == MaskIDHand) handOffset = vec3(0.0);
-
-        vec3 lP1 = o.vP - handOffset * 4.0;
-        vec3 lP2 = o.vP + handOffset * 4.0;
-
-        float heldLightDistance1 = min(3.0, 1.0 / pow2(length(lP1))) * float(heldBlockLightValue) / 15.0 * 6.0;
-        float heldLightDistance2 = min(3.0, 1.0 / pow2(length(lP2))) * float(heldBlockLightValue2) / 15.0 * 6.0;
-
-        lP1 = normalize(lP1);
-        lP2 = normalize(lP2);
-
-        heldLightSpecluar += SpecularLighting(m, -lP1, v.eyeDirection) * heldLightDistance1;
-        heldLightDiffuse  += DiffuseLighting(m, -lP1, v.eyeDirection) * max(0.0, rescale(heldLightDistance1, 1e-5, 1.0));
-
-        heldLightSpecluar += SpecularLighting(m, -lP2, v.eyeDirection) * heldLightDistance2;
-        heldLightDiffuse  += DiffuseLighting(m, -lP2, v.eyeDirection) * max(0.0, rescale(heldLightDistance2, 1e-5, 1.0));
-    #else
-        float heldLightDistance = min(3.0, 1.0 / pow2(v.viewLength)) * max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0 * 6.0;
-
-        heldLightSpecluar = SpecularLighting(m, v.eyeDirection, v.eyeDirection) * heldLightDistance;
-        heldLightDiffuse  = DiffuseLighting(m, v.eyeDirection, v.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-5, 1.0));
-    #endif    
-
-    vec3 shading = CalculateShading(vec3(texcoord, v.depth), lightVector, m.geometryNormal, 0.0) * LightingColor * shadowFade;
     
-    if(m.maskWater > 0.5) {
-        vec3 s = m.scattering * m.alpha * 0.1;
+    if(t.istranslucent > 0.9) {
+        vec3 diffuse = DiffuseLighting(m, lightVector, v.eyeDirection);
+        vec3 specular = SpecularLighting(m, lightVector, v.eyeDirection);
+        vec3 BlocksLight = (m.albedo) * (0.25 * Pi * m.lightmap.x * (m.lightmap.x * m.lightmap.x * m.lightmap.x) * (1.0 - m.metallic) * (1.0 - m.metal) * (1.0 - m.emissive));
+        vec3 SkyLight = (m.albedo * SkyLightingColor) * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * pow2(m.lightmap.y) * m.lightmap.y * invPi);
+
+        vec3 heldLightDiffuse = vec3(0.0);
+        vec3 heldLightSpecluar = vec3(0.0);
+
+        #if Held_Light_Quality == High
+            vec3 handOffset = nvec3(gbufferProjectionInverse * nvec4(vec3(1.0, 0.5, 0.0) * 2.0 - 1.0)) * vec3(1.0, 1.0, 0.0);
+            if(m.tile_mask == MaskIDHand) handOffset = vec3(0.0);
+
+            vec3 lP1 = o.vP - handOffset * 4.0;
+            vec3 lP2 = o.vP + handOffset * 4.0;
+
+            float heldLightDistance1 = min(3.0, 1.0 / pow2(length(lP1))) * float(heldBlockLightValue) / 15.0 * 6.0;
+            float heldLightDistance2 = min(3.0, 1.0 / pow2(length(lP2))) * float(heldBlockLightValue2) / 15.0 * 6.0;
+
+            lP1 = normalize(lP1);
+            lP2 = normalize(lP2);
+
+            heldLightSpecluar += SpecularLighting(m, -lP1, v.eyeDirection) * heldLightDistance1;
+            heldLightDiffuse  += DiffuseLighting(m, -lP1, v.eyeDirection) * max(0.0, rescale(heldLightDistance1, 1e-5, 1.0));
+
+            heldLightSpecluar += SpecularLighting(m, -lP2, v.eyeDirection) * heldLightDistance2;
+            heldLightDiffuse  += DiffuseLighting(m, -lP2, v.eyeDirection) * max(0.0, rescale(heldLightDistance2, 1e-5, 1.0));
+        #else
+            float heldLightDistance = min(3.0, 1.0 / pow2(v.viewLength)) * max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0 * 6.0;
+
+            heldLightSpecluar = SpecularLighting(m, v.eyeDirection, v.eyeDirection) * heldLightDistance;
+            heldLightDiffuse  = DiffuseLighting(m, v.eyeDirection, v.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-5, 1.0));
+        #endif    
+
+        vec3 shading = CalculateShading(vec3(texcoord, v.depth), lightVector, m.geometryNormal, 0.0) * LightingColor * shadowFade;
         
-        float cutoutBlend = t.cutout * (1.0 - cutoutAlpha);
-        s = mix(s, vec3(1.0), vec3(cutoutBlend));
+        if(m.maskWater > 0.5) {
+            vec3 s = m.scattering * m.alpha * 0.1;
+            
+            float cutoutBlend = t.cutout * (1.0 - cutoutAlpha);
+            s = mix(s, vec3(1.0), vec3(cutoutBlend));
 
-        diffuse *= s;
-        heldLightDiffuse *= s;
+            diffuse *= s;
+            heldLightDiffuse *= s;
 
-        SkyLight *= cutoutBlend;
+            SkyLight *= cutoutBlend;
+        }else{
+            color = vec3(0.0);
+        }
+
+        color += specular * shading;
+        color += diffuse * shading;
+        color += SkyLight;
+        color += BlockLightingColor * (BlocksLight + heldLightDiffuse + heldLightSpecluar);
     }
-
-    color += specular * shading;
-    color += diffuse * shading;
-    color += SkyLight;
-    color += BlockLightingColor * (BlocksLight + heldLightDiffuse + heldLightSpecluar);
-}
 }
 
 /*
