@@ -304,7 +304,7 @@ vec3 CalculateFog(in vec3 color, in vec3 L, in vec3 v, in float densityRayleigh,
     float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + theta * theta);
     float phaseMie = HG(theta, 0.76);
 
-    return color * (mie_scattering * phaseRayleigh * densityRayleigh + rayleigh_scattering * phaseMie * densityMie);    
+    return color * (rayleigh_scattering * phaseRayleigh * densityRayleigh + mie_scattering * phaseMie * densityMie);    
 }
 
 void LandAtmosphericScattering(inout vec3 color, in Vector v) {
