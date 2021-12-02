@@ -20,7 +20,7 @@ uniform vec3 worldLightVector;
 in vec2 texcoord;
 
 void main() {
-    Vector v = GetVector(texcoord, depthtex0);
+    Vector v = GetVector(texcoord, texture(depthtex0, texcoord).x);
 
     vec3 atmosphere_color = vec3(0.0);
     vec3 atmosphere_transmittance = vec3(1.0);

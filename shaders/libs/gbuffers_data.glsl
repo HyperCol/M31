@@ -50,6 +50,8 @@ struct Gbuffers {
 
     float maskSky;
 
+    float maskWeather;
+
     float maskHand;
     float maskEntities;
 
@@ -79,6 +81,8 @@ Gbuffers GetGbuffersData(in vec2 coord) {
     m.fullBlock     = step(texture(colortex1, coord).a, 0.5);
 
     m.maskSky = MaskCheck(m.tile_mask, Mask_ID_Sky);
+
+    m.maskWeather = MaskCheck(m.tile_mask, Weather);
     
     m.maskHand = MaskCheck(m.tile_mask, MaskIDHand);
     //m.maskEntities;
@@ -137,10 +141,10 @@ struct Vector {
     vec3 worldEyeDirection;
 };
 
-Vector GetVector(in vec2 coord, sampler2D depthtex) {
+Vector GetVector(in vec2 coord, in float depthtex) {
     Vector v;
 
-    v.depth = texture(depthtex, coord).x;
+    v.depth = depthtex;
     v.linearDepth = ExpToLinerDepth(v.depth);
 
     v.vP = nvec3(gbufferProjectionInverse * nvec4(vec3(ApplyTAAJitter(coord), v.depth) * 2.0 - 1.0));

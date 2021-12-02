@@ -161,7 +161,7 @@ void main() {
     Gbuffers    m = GetGbuffersData(texcoord);
 
     //opaque
-    Vector      o = GetVector(texcoord, depthtex0);
+    Vector      o = GetVector(texcoord, texture(depthtex0, texcoord).x);
 
     vec3 color = vec3(0.0);
 

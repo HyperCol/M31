@@ -251,6 +251,8 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
             heldLightDiffuse  = DiffuseLighting(m, v.eyeDirection, v.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-5, 1.0));
         #endif    
 
+        //float depth = m.maskWeather > 0.5 ? texture(colortex4, texcoord).x : v.depth;
+
         vec3 shading = CalculateShading(vec3(texcoord, v.depth), lightVector, m.geometryNormal, 0.0) * LightingColor * shadowFade;
         
         if(m.maskWater > 0.5) {
@@ -265,6 +267,15 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
             SkyLight *= cutoutBlend;
         }else{
             color = vec3(0.0);
+        }
+
+        if(m.maskWeather > 0.5) {
+            specular = vec3(0.0);
+
+            float theta = dot(lightVector, v.viewDirection);
+            float phase = mix(HG(theta, 0.1), HG(theta, 0.9), 0.2);
+
+            diffuse = m.albedo * phase * invPi;
         }
 
         color += specular * shading;
@@ -351,8 +362,8 @@ void main() {
     WaterData t = GetWaterData(texcoord);
 
     //opaque
-    Vector v0 = GetVector(texcoord, depthtex0);
-    Vector v1 = GetVector(texcoord, depthtex1);
+    Vector v0 = GetVector(texcoord, m.maskWeather > 0.5 ? texture(colortex4, texcoord).x : texture(depthtex0, texcoord).x);
+    Vector v1 = GetVector(texcoord, texture(depthtex1, texcoord).x);
 
     vec3 color = texture(colortex3, texcoord).rgb;//CalculateRefraction(m, t, v0, v1, texcoord);
          color = LinearToGamma(color) * MappingToHDR;

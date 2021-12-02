@@ -16,6 +16,9 @@
 
 #define Land 1.0
 
+#define Particles 253.0
+#define Weather 252.0
+
 #define Leaves 18.0
 #define Grass 31.0
 #define DoublePlanetUpper 175.0
