@@ -41,7 +41,7 @@ void main() {
 
     if(!gl_FrontFacing) {
         gl_FragData[3] = vec4(EncodeNormal, gl_FragCoord.z, 1.0);
-        gl_FragDepth = gl_FragCoord.z - 1e-5;
+        gl_FragDepth = LinerToExpDepth(ExpToLinerDepth(gl_FragCoord.z) * 1.001);
         return;
     }else{
         gl_FragData[3] = vec4(0.0);
