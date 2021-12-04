@@ -333,7 +333,7 @@ vec3 CalculateFog(in vec3 color, in vec3 L, in vec3 v, in float densityRayleigh,
 }
 
 void LandAtmosphericScattering(inout vec3 color, in Vector v) {
-    color = vec3(0.0);
+    //color = vec3(0.0);
 
 #if Land_Atmospheric_Scattering_Quality > Low
     #if Land_Atmospheric_Scattering_Quality == Medium
