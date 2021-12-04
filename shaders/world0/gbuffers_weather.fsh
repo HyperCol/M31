@@ -19,6 +19,7 @@ void main() {
     vec4 albedo = texture(tex, texcoord) * color;
     //albedo.a = 1.0;
     //albedo = vec4(1.0);
+    //albedo.rgb = vec3(maxComponent(albedo.rgb));
 
     vec2 EncodeNormal = EncodeSpheremap(normal);
 
