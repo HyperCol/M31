@@ -20,6 +20,8 @@ void main() {
     //albedo.a = 1.0;
     //albedo = vec4(1.0);
     //albedo.rgb = vec3(maxComponent(albedo.rgb));
+    //albedo.rgb = vec3(0.7);
+    albedo.a = pow(albedo.a, 3.0);
 
     vec2 EncodeNormal = EncodeSpheremap(normal);
 

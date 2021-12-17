@@ -39,7 +39,7 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
 }
 
 void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_color, in vec3 rayOrigin, in vec3 rayDirection, in vec3 mainLightDirection, in vec3 secLightDirection, in vec2 tracing) {
-    int steps = 16;
+    int steps = 12;
     float invsteps = 1.0 / float(steps);
 
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);

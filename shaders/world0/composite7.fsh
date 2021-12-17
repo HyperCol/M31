@@ -165,7 +165,7 @@ void main() {
 
     vec3 previousColor = RGBToYCoCg(ReprojectSampler(colortex7, previousCoord).rgb);
 
-    float blend = 0.987 * InScreen;
+    float blend = 0.98 * InScreen;
 
     vec3 v = YCoCgToRGB(variance);
     blend -= step(0.05, velocityLength) * 0.05;// * saturate(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.5, 1.0));
