@@ -182,7 +182,7 @@ void main() {
     }
 
     float tracingFogSun = max(0.0, IntersectPlane(vec3(0.0, o.wP.y + cameraPosition.y - 63.0, 0.0), worldLightVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
-    vec3 sunLightExtinction = min(vec3(1.0), CalculateFogLight(tracingFogSun, atmospheric.fogTransmittance) * CalculateFogPhaseFunction(1.0 - 1e-5, atmospheric) * 3.0);
+    vec3 sunLightExtinction = min(vec3(1.0), CalculateFogLight(tracingFogSun, atmospheric.fogTransmittance) * CalculateFogPhaseFunction(1.0 - 1e-5, atmospheric) / HG(0.9, 0.76));
 
     color += sunLight * LightingColor * shading * shadowFade * sunLightExtinction;
 
