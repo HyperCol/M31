@@ -3,19 +3,6 @@
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
 
-float t(in float z){
-  if(0.0 <= z && z < 0.5) return 2.0*z;
-  if(0.5 <= z && z < 1.0) return 2.0 - 2.0*z;
-  return 0.0;
-}
-
-float R2Dither(in vec2 coord){
-  float a1 = 1.0 / 0.75487766624669276;
-  float a2 = 1.0 / 0.569840290998;
-
-  return mod(coord.x * a1 + coord.y * a2, 1.0);
-}
-
 #include "/libs/setting.glsl"
 #include "/libs/common.glsl"
 #include "/libs/uniform.glsl"
@@ -23,6 +10,20 @@ float R2Dither(in vec2 coord){
 #include "/libs/gbuffers_data.glsl"
 #include "/libs/lighting/brdf.glsl"
 #include "/libs/lighting/shadowmap_common.glsl"
+
+float t(in float z){
+    if(0.0 <= z && z < 0.5) return 2.0*z;
+    if(0.5 <= z && z < 1.0) return 2.0 - 2.0*z;
+    return 0.0;
+}
+
+float R2Dither(in vec2 coord){
+    float a1 = 1.0 / 0.75487766624669276;
+    float a2 = 1.0 / 0.569840290998;
+
+    return mod(coord.x * a1 + coord.y * a2, 1.0);
+}
+
 #include "/libs/lighting/shadowmap.glsl"
 
 struct WaterData {
@@ -95,7 +96,7 @@ float CalculateSmallBlockDensity(in WaterData t, in vec3 halfVector, vec3 offset
 }
 
 void CalculateSubSurfaceScattering(inout vec3 color, in Gbuffers m, in WaterData t, in Vector v, in vec3 blockCenter, in float backDepth) {
-    int steps = 12;
+    int steps = 8;
     float invsteps = 1.0 / float(steps);
 
     vec3 scatt = vec3(0.0);
@@ -265,10 +266,8 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
             heldLightDiffuse  = DiffuseLighting(m, v.eyeDirection, v.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-5, 1.0));
         #endif    
 
-        //float depth = m.maskWeather > 0.5 ? texture(colortex4, texcoord).x : v.depth;
-
         vec3 shading = CalculateShading(vec3(texcoord, v.depth), lightVector, m.geometryNormal, 0.0) * LightingColor * shadowFade;
-        
+
         if(m.maskWater > 0.5) {
             vec3 s = m.scattering * m.alpha * 0.1;
             
@@ -291,6 +290,14 @@ void CalculateTranslucent(inout vec3 color, in Gbuffers m, in WaterData t, in Ve
 
             diffuse = m.albedo * phase * invPi;
         }
+
+        //float tracingFogSun = max(0.0, IntersectPlane(vec3(0.0, v.wP.y + cameraPosition.y - 63.0, 0.0), worldLightVector, vec3(0.0, 1000.0, 0.0), vec3(0.0, 1.0, 0.0)));
+        //vec3 sunLightExtinction = exp(-tracingFogSun * vec3(0.003) * 0.9);
+        //shading *= sunLightExtinction;
+
+        //float tracingFogUp = max(0.0, IntersectPlane(vec3(0.0, v.wP.y + cameraPosition.y - 63.0, 0.0), worldUpVector, vec3(0.0, 1000.0, 0.0), vec3(0.0, 1.0, 0.0)));
+        //vec3 skyLightExtinction = exp(-tracingFogUp * vec3(0.003) * 0.3);
+        //SkyLight *= skyLightExtinction;
 
         color += specular * shading;
         color += diffuse * shading;
@@ -332,23 +339,22 @@ vec3 CalculateFog(in vec3 color, in vec3 L, in vec3 v, in float densityRayleigh,
     return color * (rayleigh_scattering * phaseRayleigh * densityRayleigh + mie_scattering * phaseMie * densityMie);    
 }
 
-void LandAtmosphericScattering(inout vec3 color, in Vector v) {
+void LandAtmosphericScattering(inout vec3 color, in Vector v, in AtmosphericData atmospheric, bool isSky) {
     //color = vec3(0.0);
 
-#if Land_Atmospheric_Scattering_Quality > Low
-    #if Land_Atmospheric_Scattering_Quality == Medium
-    int steps = 4;
+    #if Land_Atmospheric_Scattering_Quality == Ultra
+    int steps = 16;
     float invsteps = 1.0 / float(steps);
     #elif Land_Atmospheric_Scattering_Quality == High
     int steps = 8;
     float invsteps = 1.0 / float(steps);
     #else
-    int steps = 12;
+    int steps = 4;
     float invsteps = 1.0 / float(steps);
     #endif
 
     float start = 0.0;
-    float end = v.viewLength;
+    float end = isSky ? 1500.0 : v.viewLength;
 
     float stepLength = (end - start) * invsteps;
 
@@ -361,20 +367,31 @@ void LandAtmosphericScattering(inout vec3 color, in Vector v) {
     vec3 transmittance = vec3(1.0);
 
     float theta = dot(direction, worldSunVector);
-    float pr1 = (3.0 / 16.0 / Pi) * (1.0 + theta * theta);
-    float pm1 = HG(theta, 0.76);
-    float pm2 = HG(-theta, 0.76);
+    float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + theta * theta);
+    float phaseMieSun = HG(theta, 0.76);
+    float phaseMieMoon = HG(-theta, 0.76);
 
-    for(int i = 0; i < steps; i ++) {
-        if((float(i) + dither) * stepLength > v.viewLength) break;
+    vec3 ClosestMieLightColor = SunLightingColor * phaseMieSun + MoonLightingColor * phaseMieMoon;
+    vec3 ClosestRayleighLightColor = LightingColor * phaseRayleigh;
+
+    float fogPhaseSun = mix(HG(theta, Fog_Eccentricity), HG(theta, atmospheric.fogSilverSpread) * atmospheric.fogSilverIntensity, atmospheric.fogFrontScattering);
+    float fogPhaseMoon = mix(HG(-theta, Fog_Eccentricity), HG(-theta, atmospheric.fogSilverSpread) * atmospheric.fogSilverIntensity, atmospheric.fogFrontScattering);
+
+    vec3 FogSunLightColor = SunLightingColor * fogPhaseSun;
+    vec3 FogMoonLightColor =  MoonLightingColor * fogPhaseMoon;
+    vec3 FogDirectLightColor = FogSunLightColor + FogMoonLightColor;
+
+    vec3 opticalDepth = vec3(0.0);
+
+    for(int i = 0; i < steps; i++) {
         vec3 rayPosition = origin + direction * (float(i) * stepLength);
 
         vec3 shadowCoord = WorldPositionToShadowCoord(rayPosition - cameraPosition);
-        float visibility = step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x);
+        float visibility = abs(shadowCoord.x - 0.5) >= 0.5 || abs(shadowCoord.y - 0.5) >= 0.5 || shadowCoord.z + 1e-5 > 1.0 ? 1.0 : step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x);
         float vRayleigh = mix(visibility, 1.0, 0.1);
         float vMie = mix(visibility, 1.0, 0.05);
 
-        float height = max(rayPosition.y - 63.0, 0.0) * Land_Atmospheric_Distribution;
+        float height = max(rayPosition.y - 63.0, 0.0);
 
         float Hr = exp(-height / rayleigh_distribution) * Land_Atmospheric_Density;
         vec3 Tr = (rayleigh_scattering + rayleigh_absorption) * Hr;
@@ -382,64 +399,35 @@ void LandAtmosphericScattering(inout vec3 color, in Vector v) {
         float Hm = exp(-height / mie_distribution) * Land_Atmospheric_Density;
         vec3 Tm = (mie_scattering + mie_absorption) * Hm;
 
-        vec3 alpha = exp(-stepLength * (Tr + Tm));
+        float Hfog = saturate((atmospheric.fogHeight - height) / atmospheric.fogDistribution);
+        vec3 Tfog = atmospheric.fogTransmittance * Hfog;
 
-        vec3 L1 = (SunLightingColor - SunLightingColor * alpha) * transmittance * ((rayleigh_scattering * (Hr * pr1 * vRayleigh) + mie_scattering * (Hm * pm1 * vMie)) / (Tr + Tm));
-        vec3 L2 = (MoonLightingColor - MoonLightingColor * alpha) * transmittance * ((rayleigh_scattering * (Hr * pr1 * vRayleigh) + mie_scattering * (Hm * pm2 * vMie)) / (Tr + Tm));
+        vec3 stepTransmittance = exp(-(Tr + Tm + Tfog) * stepLength);
+        vec3 inverseTransmittance = 1.0 / max(vec3(1e-8), Tr + Tm + Tfog);
 
-        scattering += L1 + L2;
-        transmittance *= alpha;
+        //atmospheric scattering
+        scattering += (ClosestRayleighLightColor - ClosestRayleighLightColor * stepTransmittance) * transmittance * inverseTransmittance * rayleigh_scattering * Hr * vRayleigh;
+        scattering += (ClosestMieLightColor - ClosestMieLightColor * stepTransmittance) * transmittance * inverseTransmittance * mie_scattering * Hm * vMie;
+
+        //fog
+        float tracingFogSun = IntersectPlane(vec3(0.0, height, 0.0), worldSunVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0));
+        float tracingFogMoon = max(0.0, -tracingFogSun); 
+        float tracingFogUp = max(0.0, IntersectPlane(vec3(0.0, height, 0.0), worldUpVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
+              tracingFogSun = max(0.0, tracingFogSun);
+        
+        vec3 FogLightColor = FogSunLightColor * CalculateFogLight(tracingFogSun, Tfog) * visibility;
+             FogLightColor += FogMoonLightColor * CalculateFogLight(tracingFogMoon, Tfog) * visibility;
+             FogLightColor += SkyLightingColor * CalculateFogLight(tracingFogUp, Tfog) * 0.047;
+
+        scattering += (FogLightColor - FogLightColor * stepTransmittance) * transmittance * inverseTransmittance * atmospheric.fogScattering * Hfog;
+
+        transmittance *= stepTransmittance;
     }
 
     color *= transmittance;
     color += scattering;
-#else
-    float cameraHeight = max(0.0, cameraPosition.y + 1.6 - 63.0);
-    float worldHeight = max(0.0, cameraPosition.y + v.wP.y - 63.0);
-
-    float height = min(worldHeight, cameraHeight);
-
-    float Hr = exp(-height / rayleigh_distribution * Land_Atmospheric_Distribution) * Land_Atmospheric_Density;
-    float Hm = exp(-height / mie_distribution * Land_Atmospheric_Distribution) * Land_Atmospheric_Density;
-
-    vec3 Tr = (rayleigh_scattering + rayleigh_absorption) * Hr;
-    vec3 Tm = (mie_scattering + mie_absorption) * Hm;
-
-    vec3 transmittance = exp(-(Tr + Tm) * v.viewLength);
-
-    color *= transmittance;
-
-    float dither = R2Dither(ApplyTAAJitter(texcoord) * resolution);
-
-    vec3 shadowCoord = WorldPositionToShadowCoord(v.worldViewDirection * (v.viewLength * mix(1.0, dither, 0.5)));
-    float visibility = step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x);
-    float vRayleigh = mix(visibility, 1.0, 0.1);
-    float vMie = mix(visibility, 1.0, 0.05);
-
-    float theta = dot(sunVector, v.viewDirection);
-    float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + theta * theta) * vRayleigh;
-    float phaseMieSun = HG(theta, 0.76) * vMie;
-    float phaseMieMoon = HG(-theta, 0.76) * vMie;
-
-    vec3 scattering = (1.0 - transmittance) / (Tr + Tm);
-
-    color += scattering * SunLightingColor * (Hr * phaseRayleigh * rayleigh_scattering + Hm * phaseMieSun * mie_scattering);
-    color += scattering * MoonLightingColor * (Hr * phaseRayleigh * rayleigh_scattering + Hm * phaseMieMoon * mie_scattering);
-#endif
 }
-/*
-void CalculateRainFog(inout vec3 color, in Vector v) {
-    vec3 scattering = vec3(0.01);
-    vec3 absorption = vec3(0.0);
-    vec3 transmittance = scattering + absorption;
 
-    vec3 extinction = exp(-transmittance * v.viewLength);
-    color *= extinction;
-
-    vec3 extinction2 = exp(-transmittance * min(512.0, v.viewLength) * 0.25);
-    color += scattering * extinction2 * mix(HG(dot(v.viewDirection, sunVector), -0.1), HG(dot(v.viewDirection, sunVector), 0.4), 0.5) * v.viewLength;
-}
-*/
 void main() {
     //materials
     Gbuffers m = GetGbuffersData(texcoord);
@@ -450,13 +438,14 @@ void main() {
     Vector v0 = GetVector(texcoord, m.maskWeather > 0.5 ? texture(colortex4, texcoord).x : texture(depthtex0, texcoord).x);
     Vector v1 = GetVector(texcoord, texture(depthtex1, texcoord).x);
 
+    AtmosphericData atmospheric = GetAtmosphericDate(timeFog, timeHaze);
+
     vec3 color = texture(colortex3, texcoord).rgb;//CalculateRefraction(m, t, v0, v1, texcoord);
          color = LinearToGamma(color) * MappingToHDR;
 
     CalculateTranslucent(color, m, t, v0, v1, texcoord);
 
-    if(m.maskSky < 0.5)
-    LandAtmosphericScattering(color, v0);
+    LandAtmosphericScattering(color, v0, atmospheric, m.maskSky > 0.5);
 
     color = color / (color + 1.0);
     color = GammaToLinear(color);

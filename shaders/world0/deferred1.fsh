@@ -35,17 +35,20 @@ void CalculatePlanetSurface(inout vec3 color, in vec3 LightColor0, in vec3 Light
 
     float cosTheta = dot(L, direction);
 
-    float phaseM0 = HG(cosTheta, 0.76);
-    float phaseM1 = HG(-cosTheta, 0.76);
+    vec2 phaseMie = vec2(HG(cosTheta, 0.76), HG(-cosTheta, 0.76));
+    float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + cosTheta * cosTheta);
 
-    float phaseR = (3.0 / 16.0 / Pi) * (1.0 + cosTheta * cosTheta);
+    float Hr = exp(-h / rayleigh_distribution);
+    float Hm = exp(-h / mie_distribution);
 
-    vec3 Tr = exp(-h / rayleigh_distribution) * (rayleigh_absorption + rayleigh_scattering);
-    vec3 Tm = exp(-h / mie_distribution) * (mie_absorption + mie_scattering);
+    vec3 Tr = Hr * (rayleigh_absorption + rayleigh_scattering);
+    vec3 Tm = Hm * (mie_absorption + mie_scattering);
 
-    vec3 transmittance = 1.0 - exp(-sqrt(pow2(t) + pow2(h)) * 3.0 * (Tr + Tm));
+    float stepLength = sqrt(pow2(t) + pow2(h)) * max(Land_Atmospheric_Density, 10.0);
+    vec3 transmittance = exp(-stepLength * (Tr + Tm) * 0.25) * stepLength;
 
-    color = LightColor0 * (phaseM0 + phaseR) * (transmittance) + LightColor1 * (phaseM1 + phaseR) * (transmittance);
+    color = LightColor0 * transmittance * (phaseMie.x * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
+    color += LightColor1 * transmittance * (phaseMie.y * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
 }
 
 float ComputeAO(in vec3 P, in vec3 N, in vec3 S) {
@@ -163,6 +166,8 @@ void main() {
     //opaque
     Vector      o = GetVector(texcoord, texture(depthtex0, texcoord).x);
 
+    AtmosphericData atmospheric = GetAtmosphericDate(timeFog, timeHaze);
+
     vec3 color = vec3(0.0);
 
     float simplesss = m.fullBlock < 0.5 && m.material > 65.0 ? 1.0 : 0.0;
@@ -176,19 +181,28 @@ void main() {
         sunLight += LeavesShading(lightVector, o.eyeDirection, m.texturedNormal, m.albedo.rgb, m.transmittance, m.scattering);
     }
 
-    color += sunLight * LightingColor * shading * shadowFade;
+    float tracingFogSun = max(0.0, IntersectPlane(vec3(0.0, o.wP.y + cameraPosition.y - 63.0, 0.0), worldLightVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
+    vec3 sunLightExtinction = min(vec3(1.0), CalculateFogLight(tracingFogSun, atmospheric.fogTransmittance) * CalculateFogPhaseFunction(1.0 - 1e-5, atmospheric) * 3.0);
+
+    color += sunLight * LightingColor * shading * shadowFade * sunLightExtinction;
+
+    float tracingFogUp = max(0.0, IntersectPlane(vec3(0.0, o.wP.y + cameraPosition.y - 63.0, 0.0), worldUpVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
+    vec3 skyLightExtinction = CalculateFogLight(tracingFogUp, atmospheric.fogTransmittance);
 
     float ao = ScreenSpaceAmbientOcclusion(m, o);
 
     float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0));
     float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 8.0, 1.0));
 
+    vec3 AmbientLightColor = SkyLightingColor;
+         AmbientLightColor += LightingColor * atmospheric.fogScattering * (tracingFogUp * 0.5) * CalculateFogPhaseFunction(worldLightVector.y, atmospheric);
+
     vec3 AmbientLight = vec3(0.0);
-         AmbientLight += m.albedo * SunLightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
-         AmbientLight += m.albedo * SkyLightingColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
+         AmbientLight += m.albedo * LightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
+         AmbientLight += m.albedo * AmbientLightColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
          AmbientLight *= mix(SkyLighting0, SkyLighting1, 0.7) * (1.0 - m.metal) * (1.0 - m.metallic);
 
-    color += AmbientLight;
+    color += AmbientLight * skyLightExtinction;
 
     vec3 handHeldLight = m.albedo * invPi * BlockLightingColor * (float(heldBlockLightValue) + float(heldBlockLightValue2)) / 15.0;
 

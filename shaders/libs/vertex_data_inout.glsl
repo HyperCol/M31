@@ -1,3 +1,6 @@
+#ifndef VERTEX_DATA_INOUT
+#define VERTEX_DATA_INOUT
+
 #ifndef io
 #define io in
 #endif
@@ -28,6 +31,9 @@ io vec3 upVector;
 io vec3 worldUpVector;
 #endif
 
+io float timeFog;
+io float timeHaze;
+
 io float shadowFade;
 io float starsFade;
 
@@ -38,3 +44,4 @@ io vec3 SkyLightingColor;
 io vec3 BlockLightingColor;
 
 io vec2 texcoord;
+#endif

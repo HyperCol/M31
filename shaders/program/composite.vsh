@@ -6,6 +6,8 @@
 #include "/libs/common.glsl"
 #include "/libs/volumetric/atmospheric_common.glsl"
 
+uniform int worldTime;
+
 #if !defined(MC_VERSION)
 uniform vec3 upPosition;
 uniform vec3 sunPosition;
@@ -120,7 +122,6 @@ void main() {
     LightingColor       = SunLightingColor + MoonLightingColor;
     SkyLightingColor    = SimpleInScattering(samplePosition, worldUpVector, 0.5, 0.5) * (Nature_Light_Min_Luminance + mix(vec3(sum3(SunLightingColor) + sum3(MoonLightingColor)), SunLightingColor + MoonLightingColor, vec3(0.1)));
 
-
     #if Blocks_Light_Color == Color_Temperature
     BlockLightingColor  = ColorTemperatureToRGB(Blocks_Light_Color_Temperture) * Blocks_Light_Intensity * Blocks_Light_Luminance;
     #else
@@ -130,4 +131,9 @@ void main() {
     shadowFade = saturate(rescale(abs(worldSunVector.y), 0.05, 0.1));
 
     starsFade = saturate(rescale(worldMoonVector.y, Stars_Fade_Out, Stars_Fade_In));
+
+    float time = float(worldTime);
+
+    timeFog = (1.0 - (clamp(time, 0.0, 3000.0) - 0.0) / 3000.0) + ((clamp(time, 23000.0, 24000.0) - 23000.0) / 1000.0);
+    timeHaze = (clamp(time, 8000.0, 11000.0) - 8000.0) / 3000.0 - (clamp(time, 11000.0, 13000) - 11000.0) / 2000.0;
 }

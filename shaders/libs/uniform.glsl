@@ -5,6 +5,8 @@ uniform mat4 gbufferModelView;
 
 uniform vec3 cameraPosition;
 
+uniform float rainStrength;
+
 uniform float near;
 uniform float far;
 

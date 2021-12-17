@@ -52,11 +52,12 @@
 #define Translucent_Blocks_Quality High             //[Low High]
 
 //Atmosphere
-#define Land_Atmospheric_Scattering_Quality Low     //[Low Medium High Ultra]
-#define Land_Atmospheric_Density 10.0               //[1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 20.0 30.0 40.0 50.0 60.0 70.0 80.0 90.0 100.0]
+#define Land_Atmospheric_Scattering_Quality High     //[Medium High Ultra]
+#define Land_Atmospheric_Density 5.0                //[1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 20.0 30.0 40.0 50.0 60.0 70.0 80.0 90.0 100.0]
 #define Land_Atmospheric_Distribution 100.0         //[1.0 5.0 10.0 50.0 100.0 500.0 1000.0]
+#define Far_Fog_Start_Distance 0.0                  //[0.0 10.0 20.0 30.0 40.0 50.0 60.0 70.0 80.0 90.0 100.0]
 
-#define Sky_Atmospheric_Scattering_Quality High     //[Low Medium High]
+#define Sky_Atmospheric_Scattering_Quality High     //[Medium High Ultra]
 
 #define Atmospheric_Shape Sphere                    //[Sphere Cube]
 
