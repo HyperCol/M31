@@ -117,8 +117,8 @@ void main() {
 
     vec3 Tt = rayleigh_scattering + mie_scattering;
     
-    SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.5, 0.2) * Sun_Light_Luminance;
-    MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.5, 0.2) * Moon_Light_Luminance;
+    SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.5, 0.15) * Sun_Light_Luminance;
+    MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.5, 0.15) * Moon_Light_Luminance;
     LightingColor       = SunLightingColor + MoonLightingColor;
     SkyLightingColor    = SimpleInScattering(samplePosition, worldUpVector, 0.5, 0.5) * (Nature_Light_Min_Luminance + mix(vec3(sum3(SunLightingColor) + sum3(MoonLightingColor)), SunLightingColor + MoonLightingColor, vec3(0.1)));
 
@@ -134,6 +134,6 @@ void main() {
 
     float time = float(worldTime);
 
-    timeFog = (1.0 - (clamp(time, 0.0, 3000.0) - 0.0) / 3000.0) + ((clamp(time, 23000.0, 24000.0) - 23000.0) / 1000.0);
+    timeFog = max((1.0 - (clamp(time, -2000.0, 4000.0) - -2000.0) / 4000.0), (clamp(time, 14000.0, 18000.0) - 14000.0) / 4000.0 - (clamp(time, 22000.0, 28000.0) - 22000.0) / 6000.0);
     timeHaze = (clamp(time, 8000.0, 11000.0) - 8000.0) / 3000.0 - (clamp(time, 11000.0, 13000) - 11000.0) / 2000.0;
 }
