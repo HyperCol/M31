@@ -1,6 +1,12 @@
 vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
+
+    #if Far_Atmospheric_Scattering_Quality != Medium
     int steps = 6;
     float invsteps = 1.0 / float(steps);
+    #else
+    int steps = 3;
+    float invsteps = 1.0 / float(steps);    
+    #endif
 
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0, -1.0, 0.0), planet_radius);
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
@@ -39,8 +45,16 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
 }
 
 void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_color, in vec3 rayOrigin, in vec3 rayDirection, in vec3 mainLightDirection, in vec3 secLightDirection, in vec2 tracing) {
+    #if Far_Atmospheric_Scattering_Quality == High
+    int steps = 8;
+    float invsteps = 1.0 / float(steps);
+    #elif Far_Atmospheric_Scattering_Quality == Ultra
     int steps = 12;
     float invsteps = 1.0 / float(steps);
+    #else
+    int steps = 4;
+    float invsteps = 1.0 / float(steps);
+    #endif
 
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), planet_radius);
@@ -49,6 +63,7 @@ void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_colo
     float start = tracingAtmosphere.x > 0.0 ? tracingAtmosphere.x : 0.0;
 
     float theta = dot(rayDirection, mainLightDirection);
+
     float mainPhaseR = (3.0 / 16.0 / Pi) * (1.0 + theta * theta);
     float mainPhaseM = HG(theta, 0.76);
 
@@ -69,12 +84,12 @@ void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_colo
         vec3 p = rayOrigin + rayDirection * (stepLength + stepLength * float(i) + start);
         float h = max(1e-5, length(p) - planet_radius);
 
-        float density_rayleigh  = stepLength * exp(-h / rayleigh_distribution);
-        float density_mie       = stepLength * exp(-h / mie_distribution);
-        float density_ozone     = stepLength * max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
+        float density_rayleigh  = exp(-h / rayleigh_distribution);
+        float density_mie       = exp(-h / mie_distribution);
+        float density_ozone     = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
 
         vec3 tau = (rayleigh_scattering + rayleigh_absorption) * (density_rayleigh) + (mie_scattering + mie_absorption) * (density_mie) + (ozone_absorption + ozone_scattering) * density_ozone;
-        vec3 attenuation = exp(-tau);
+        vec3 attenuation = exp(-tau * stepLength);
 
         vec3 L1 = CalculateLocalInScattering(p, mainLightDirection) * Sun_Light_Luminance;
         vec3 alphaMain = (L1 - L1 * attenuation) * transmittance / tau;

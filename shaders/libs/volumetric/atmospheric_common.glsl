@@ -1,4 +1,4 @@
-#if Atmosphere_Profile == Earth_Like
+#if Atmosphere_Profile == Earth_Alike
     const vec3  rayleigh_scattering         = vec3(5.8, 13.5, 33.1) * 1e-6;
     const vec3  rayleigh_absorption         = vec3(0.0);
     const float rayleigh_distribution       = 8000.0;
@@ -40,20 +40,19 @@
 #define Fog_Albedo_G 0.8
 #define Fog_Albedo_B 1.0
 
-#define Fog_Eccentricity -0.1
+#define Fog_Eccentricity -0.3
 #define Fog_Silver_Spread 0.4
-#define Fog_Silver_Intensity 1.0
-#define Fog_Front_Scattering 0.6
+#define Fog_Silver_Intensity 0.3
+#define Fog_Front_Scattering 0.8
+#define Fog_Scattering_Density 2.0
+#define Fog_Absorption_Density 2.0
+#define Fog_Height 64.0
+#define Fog_Distribution 16.0
 
 #define RainFog_Eccentricity -0.1
 #define RainFog_Silver_Spread 0.5
-#define RainFog_Silver_Intensity 1.0
-#define RainFog_Front_Scattering 0.1
-
-#define Fog_Scattering_Density 1.0
-#define Fog_Absorption_Density 1.0
-#define Fog_Height 90.0
-#define Fog_Distribution 16.0
+#define RainFog_Silver_Intensity 0.2
+#define RainFog_Front_Scattering 0.4
 
 #define RainFog_Scattering_Density 10.0
 #define RainFog_Absorption_Density 10.0
@@ -93,8 +92,8 @@ AtmosphericData GetAtmosphericDate(in float fog, in float haze) {
     atmospheric.fogHeight = mix(Fog_Height, RainFog_Height, rainStrength);
     atmospheric.fogDistribution = Fog_Distribution;
 
-    atmospheric.fogScattering = vec3(Fog_Scattering_R, Fog_Scattering_G, Fog_Scattering_B) * (fog * Fog_Scattering_Density + rainStrength * RainFog_Scattering_Density);
-    atmospheric.fogAbsorption = vec3(Fog_Absorption_R, Fog_Absorption_G, Fog_Absorption_B) * (fog * Fog_Absorption_Density + rainStrength * RainFog_Absorption_Density);
+    atmospheric.fogScattering = vec3(Fog_Scattering_R, Fog_Scattering_G, Fog_Scattering_B) * max(fog * Fog_Scattering_Density, rainStrength * RainFog_Scattering_Density);
+    atmospheric.fogAbsorption = vec3(Fog_Absorption_R, Fog_Absorption_G, Fog_Absorption_B) * max(fog * Fog_Absorption_Density, rainStrength * RainFog_Absorption_Density);
     atmospheric.fogTransmittance = atmospheric.fogScattering + atmospheric.fogAbsorption;
     atmospheric.fogAlbedo = vec3(1.0);
 
@@ -115,23 +114,3 @@ vec3 CalculateFogLight(in float depth, in vec3 t) {
 float CalculateFogPhaseFunction(in float theta, in AtmosphericData atmospheric) {
     return mix(HG(theta, Fog_Eccentricity), HG(theta, atmospheric.fogSilverSpread) * atmospheric.fogSilverIntensity, atmospheric.fogFrontScattering); 
 }
-
-/*
-const vec3  sunriseFogScattering = vec3(0.0003);
-const vec3  sunriseFogAbsorption = vec3(0.00003);
-const vec3  sunriseFogAlbedo     = vec3(0.75, 0.95, 1.0);
-const float sunriseFogHeight     = 48.0;
-const float sunriseFogPhase      = 0.4;
-
-const vec3  sunsetFogScattering = vec3(0.0003);
-const vec3  sunsetFogAbsorption = vec3(0.00003);
-const vec3  sunsetFogAlbedo     = vec3(0.75, 0.95, 1.0);
-const float sunsetFogHeight     = 48.0;
-const float sunsetFogPhase      = 0.4;
-
-const vec3  rainFogScattering = vec3(0.003);
-const vec3  rainFogAbsorption = vec3(0.0003);
-const vec3  rainFogAlbedo     = vec3(0.75, 0.95, 1.0);
-const float rainFogHeight     = 1000.0;
-const float rainFogPhase      = 0.3;
-*/

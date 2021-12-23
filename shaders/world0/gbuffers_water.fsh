@@ -56,8 +56,8 @@ void main() {
     if(tileMask == Water) {
         smoothness = 0.995;
         metallic = 0.02;
-        scattering = 0.85;
-        absorption = 3.0;
+        scattering = 0.8;
+        absorption = 8.0;
 
         albedo = vec4(color.rgb, 0.05);
     } else if(tileMask == Glass || tileMask == GlassPane) {
