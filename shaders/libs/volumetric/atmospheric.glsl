@@ -1,19 +1,18 @@
 vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
-
-    #if Far_Atmospheric_Scattering_Quality != Medium
-    int steps = 6;
-    float invsteps = 1.0 / float(steps);
+    #if Far_Atmospheric_Scattering_Quality == High
+    const int steps = 6;
+    #elif Far_Atmospheric_Scattering_Quality > High
+    const int steps = 9;
     #else
-    int steps = 3;
-    float invsteps = 1.0 / float(steps);    
+    const int steps = 3;
     #endif
+
+    const float invsteps = 1.0 / float(steps);
 
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0, -1.0, 0.0), planet_radius);
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
 
-    #ifndef Soft_Planet_Shadow
     if(tracingPlanet.x > 0.0 && tracingPlanet.y > 0.0) return vec3(0.0);
-    #endif
 
     if(tracingAtmosphere.y < 0.0) return vec3(1.0);
 
@@ -35,26 +34,12 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
     vec3 tau = (rayleigh_scattering + rayleigh_absorption) * opticalDepth.x + (mie_scattering + mie_absorption) * opticalDepth.y + (ozone_absorption + ozone_scattering) * opticalDepth.z;
     vec3 transmittance = exp(-tau);
 
-    #ifdef Soft_Planet_Shadow
-        if(tracingPlanet.x > 0.0 && tracingPlanet.y > 0.0) {
-            transmittance *= exp(-0.00001 * (tracingPlanet.y - tracingPlanet.x));
-        }
-    #endif
-
     return transmittance;
 }
 
-void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_color, in vec3 rayOrigin, in vec3 rayDirection, in vec3 mainLightDirection, in vec3 secLightDirection, in vec2 tracing) {
-    #if Far_Atmospheric_Scattering_Quality == High
-    int steps = 8;
-    float invsteps = 1.0 / float(steps);
-    #elif Far_Atmospheric_Scattering_Quality == Ultra
-    int steps = 12;
-    float invsteps = 1.0 / float(steps);
-    #else
-    int steps = 4;
-    float invsteps = 1.0 / float(steps);
-    #endif
+void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_color, in vec3 rayOrigin, in vec3 rayDirection, in vec3 L, in vec2 tracing) {
+    const int steps = 12;
+    const float invsteps = 1.0 / float(steps);
 
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), planet_radius);
@@ -62,21 +47,16 @@ void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_colo
     float end = tracingPlanet.x > 0.0 ? tracingPlanet.x : tracingAtmosphere.y;
     float start = tracingAtmosphere.x > 0.0 ? tracingAtmosphere.x : 0.0;
 
-    float theta = dot(rayDirection, mainLightDirection);
-
-    float mainPhaseR = (3.0 / 16.0 / Pi) * (1.0 + theta * theta);
-    float mainPhaseM = HG(theta, 0.76);
-
-    float secTheta = dot(rayDirection, secLightDirection);
-    float secPhaseR = (3.0 / 16.0 / Pi) * (1.0 + secTheta * secTheta);
-    float secPhaseM = HG(secTheta, 0.76);
+    float theta = dot(rayDirection, L);
+    float miePhase = HG(theta, 0.76);
+    float miePhase2 = HG(-theta, 0.76);
+    float rayleighPhase = (3.0 / 16.0 / Pi) * (1.0 + theta * theta);
 
     float stepLength = (end - start) * invsteps;
 
-    vec3 opticalDepth = vec3(0.0);
-
     vec3 r = vec3(0.0);
     vec3 m = vec3(0.0);
+    vec3 m2 = vec3(0.0);
 
     vec3 transmittance = vec3(1.0);
 
@@ -91,18 +71,20 @@ void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_colo
         vec3 tau = (rayleigh_scattering + rayleigh_absorption) * (density_rayleigh) + (mie_scattering + mie_absorption) * (density_mie) + (ozone_absorption + ozone_scattering) * density_ozone;
         vec3 attenuation = exp(-tau * stepLength);
 
-        vec3 L1 = CalculateLocalInScattering(p, mainLightDirection) * Sun_Light_Luminance;
-        vec3 alphaMain = (L1 - L1 * attenuation) * transmittance / tau;
+        vec3 L1 = CalculateLocalInScattering(p, L) * Sun_Light_Luminance;
+        vec3 S1 = (L1 - L1 * attenuation) * transmittance / tau;
 
-        vec3 L2 = CalculateLocalInScattering(p, secLightDirection) * Moon_Light_Luminance;
-        vec3 alphaSec = (L2 - L2 * attenuation) * transmittance / tau;
+        vec3 L2 = CalculateLocalInScattering(p, -L) * Moon_Light_Luminance;
+        vec3 S2 = (L2 - L2 * attenuation) * transmittance / tau;
 
-        r += (alphaMain * mainPhaseR + alphaSec * secPhaseR) * density_rayleigh;
-        m += (alphaMain * mainPhaseM + alphaSec * secPhaseM) * density_mie;
+        r += (S1 + S2) * density_rayleigh;
+        m += S1 * density_mie;
+        m2 += S2 * density_mie; 
+
         transmittance *= attenuation;
     }
 
     color *= transmittance;
 
-    atmosphere_color = (r * rayleigh_scattering + m * mie_scattering);
+    atmosphere_color = r * rayleigh_scattering * rayleighPhase + m * mie_scattering * miePhase + m2 * mie_scattering * miePhase2;
 }

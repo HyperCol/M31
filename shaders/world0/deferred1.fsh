@@ -38,14 +38,14 @@ void CalculatePlanetSurface(inout vec3 color, in vec3 LightColor0, in vec3 Light
     vec2 phaseMie = vec2(HG(cosTheta, 0.76), HG(-cosTheta, 0.76));
     float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + cosTheta * cosTheta);
 
-    float Hr = exp(-h / rayleigh_distribution) * Near_Atmosphere_Density;
-    float Hm = exp(-h / mie_distribution) * Near_Atmosphere_Density;
+    float Hr = exp(-h / rayleigh_distribution) * Near_Atmosphere_Density * 20.0;
+    float Hm = exp(-h / mie_distribution) * Near_Atmosphere_Density * 20.0;
 
     vec3 Tr = Hr * (rayleigh_absorption + rayleigh_scattering);
     vec3 Tm = Hm * (mie_absorption + mie_scattering);
 
-    float stepLength = sqrt(pow2(t) + pow2(h));
-    vec3 transmittance = exp(-stepLength * (Tr + Tm) * 0.25) * stepLength;
+    float stepLength = t;
+    vec3 transmittance = exp(-stepLength * (Tr + Tm) * 0.5) * stepLength;
 
     color = LightColor0 * transmittance * (phaseMie.x * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
     color += LightColor1 * transmittance * (phaseMie.y * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);

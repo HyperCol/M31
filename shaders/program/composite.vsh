@@ -115,8 +115,6 @@ void main() {
     vec2 phaseMie = vec2(HG(theta, 0.76), HG(-theta, 0.76));
     float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + theta * theta);
 
-    vec3 Tt = rayleigh_scattering + mie_scattering;
-    
     SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.5, 0.15) * Sun_Light_Luminance;
     MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.5, 0.15) * Moon_Light_Luminance;
     LightingColor       = SunLightingColor + MoonLightingColor;
