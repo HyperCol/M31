@@ -52,6 +52,9 @@
 #define Translucent_Blocks_Quality High             //[Low High]
 
 //Atmosphere
+#define Clouds_Quality Medium                       //[Medium High Ultra]
+#define Clouds_Lighting_Quality Low                 //[Low High]
+
 #define Near_Atmosphere_Quality High                //[Medium High Ultra]
     #define Near_Atmosphere_Density 2               //[1 2 3 4 5 6 7 8 9 10 20 30 40 50 60 70 80 90 100]
     #define Near_Atmosphere_Distribution 50.0       //[1.0 10.0 50.0 100.0 500.0 1000.0]
@@ -59,8 +62,6 @@
 #define Far_Atmosphere_Quality High                 //[Medium High Ultra]
 
 #define Atmosphere_Shape Sphere                     //[Sphere Cube]
-
-//#define Soft_Planet_Shadow                          //
 
 #define Planet_Radius 6360000.0                     //[]
 #define Atmosphere_Radius 6420000.0                 //[]

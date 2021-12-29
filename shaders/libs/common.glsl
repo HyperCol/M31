@@ -64,6 +64,10 @@ float rescale(in float v, in float vmin, in float vmax) {
     return (v - vmin) / (vmax - vmin);
 }
 
+float remap(float value, float original_min, float original_max, float new_min, float new_max) {
+  return max(0.0, new_min + (((value - original_min) / (original_max - original_min)) * (new_max - new_min)));
+}
+
 float pack2x8(in vec2 x) {
     float pack = dot(round(x * 255.0), vec2(1.0, 256.0));
     return pack / 65535.0;

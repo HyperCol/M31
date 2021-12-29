@@ -7,6 +7,30 @@ uniform sampler2D colortex11;
 
 const bool colortex11Clear = false;
 
+uniform sampler2D noisetex;
+
+const int noiseTextureResolution = 64;
+
+float noise(in vec2 x){
+    return texture(noisetex, x / noiseTextureResolution).x;
+}
+
+float noise(in vec3 x) {
+    //x = x.xzy;
+
+    vec3 i = floor(x);
+    vec3 f = fract(x);
+
+	f = f*f*(3.0-2.0*f);
+
+	vec2 uv = (i.xy + i.z * vec2(17.0)) + f.xy;
+    uv += 0.5;
+
+	vec2 rg = vec2(noise(uv), noise(uv+17.0));
+
+	return mix(rg.x, rg.y, f.z);
+}
+
 #include "/libs/setting.glsl"
 #include "/libs/common.glsl"
 #include "/libs/uniform.glsl"
@@ -425,6 +449,204 @@ void LandAtmosphericScattering(inout vec3 color, in Vector v, in AtmosphericData
     color += scattering;
 }
 #endif
+
+vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint, float sampleHeight) {
+    vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, L, vec3(0.0), atmosphere_radius);
+    //vec2 tracingPlanet = RaySphereIntersection(rayOrigin, L, vec3(0.0), planet_radius);
+    if(tracingAtmosphere.y < 0.0) return vec3(1.0);
+
+    float stepLength = tracingAtmosphere.y * samplePoint;
+
+    float h = length(rayOrigin + (tracingAtmosphere.y * sampleHeight) * L) - planet_radius;
+
+    float density_rayleigh  = stepLength * exp(-h / rayleigh_distribution);
+    float density_mie       = stepLength * exp(-h / mie_distribution);
+
+    vec3 tau = (rayleigh_scattering + rayleigh_absorption) * density_rayleigh + (mie_scattering + mie_absorption) * density_mie;
+    vec3 transmittance = exp(-tau);
+
+    return transmittance;
+}
+
+float GetCloudsMap(in vec3 position) {
+    vec3 worldPosition = vec3(position.x, position.z, position.y - planet_radius);
+
+    vec3 shapeCoord = worldPosition * 0.0005;
+    float shape = (noise(shapeCoord.xy) + noise(shapeCoord.xy * 2.0) * 0.5) / 1.5;
+    float shape2 = (noise(shapeCoord * 4.0) + noise(shapeCoord.xy * 8.0) * 0.5) / 1.5;
+
+    float density = max(0.0, rescale((shape + shape2 * 0.5) / 1.5, 0.1, 1.0));
+
+    return density;
+}
+
+float GetCloudsMapDetail(in vec3 position, in float shape, in float distortion) {
+    vec3 worldPosition = vec3(position.x, position.z, position.y - planet_radius);
+
+    vec3 noiseCoord0 = worldPosition * 0.01;
+    float noise0 = (noise(noiseCoord0) + noise(noiseCoord0 * 2.0) * 0.5 + noise(noiseCoord0 * 4.0) * 0.25) / (1.75);
+
+    return max(0.0, rescale(shape - noise0 * distortion, 0.0, 1.0 - distortion));
+} 
+
+float GetCloudsCoverage(in float linearHeight) {
+    return pow(0.75, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.5)) * saturate(rescale(linearHeight, -0.05, 0.1)));
+}
+
+const float clouds_height = 1500.0;
+const float clouds_thickness = 800.0;
+
+float CalculateCloudsCoverage(in float height, in float clouds) {
+    //float height = length(worldPosition - vec3(cameraPosition.x, 0.0, cameraPosition.z)) - planet_radius;
+    float linearHeight = (height - clouds_height) / clouds_thickness;    
+
+    return saturate(rescale(clouds, GetCloudsCoverage(linearHeight), 1.0) * 2.0);
+}
+
+vec3 CalculateCloudsMediaSample(in float height) {
+    return mix(vec3(0.09), vec3(0.05), height);
+}
+
+void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
+    vec3 direction = v.worldViewDirection;
+
+    vec3 origin = vec3(0.0, planet_radius, 0.0) + vec3(cameraPosition.x, max(0.0, cameraPosition.y - 63.0), cameraPosition.z) * 1.0;
+    float landDistance = v.viewLength * 1.0;
+
+    const int steps = 12;
+    const float invsteps = 1.0 / float(steps);
+
+    const int steplight = 4;
+    const float invsteplight = 1.0 / float(steplight);
+
+    vec2 tracing = RaySphereIntersection(vec3(0.0, origin.y, 0.0), direction, vec3(0.0), planet_radius + clouds_height);
+    vec2 tracingPlanet = RaySphereIntersection(vec3(0.0, origin.y, 0.0), direction, vec3(0.0), planet_radius);
+
+    vec2 tracingTop = RaySphereIntersection(vec3(0.0, origin.y, 0.0), direction, vec3(0.0), planet_radius + clouds_height + clouds_thickness);
+    vec2 tracingBottom = RaySphereIntersection(vec3(0.0, origin.y, 0.0), direction, vec3(0.0), planet_radius + clouds_height);
+
+    float bottom = tracingBottom.x > 0.0 ? tracingBottom.x : max(0.0, tracingBottom.y);
+    float top = tracingTop.x > 0.0 ? tracingTop.x : max(0.0, tracingTop.y);
+
+    float start = bottom;
+    float end = top;
+
+    if(start > end) {
+        float v = start;
+        start = end;
+        end = v;
+    }
+
+    if(!isSky) {
+        start = 0.0;
+        end = landDistance;
+        return;
+    }
+
+    float stepLength = (end - start) * invsteps;
+    float currentLength = start;
+
+    //if((tracingTop.x < 0.0 && tracingTop.y < 0.0) || (tracingBottom.x < 0.0 && tracingBottom.y < 0.0)) return;
+    if(tracingPlanet.x > 0.0 && max(start, end) > tracingPlanet.x) return;
+
+    vec3 transmittance = vec3(1.0);
+    vec3 scattering = vec3(0.0);
+
+    vec3 clouds_scattering = vec3(0.1);
+
+    float theta = dot(worldSunVector, direction);
+    float sunPhase = max(invPi * rescale(0.1, 0.0, 0.1), mix(HG(theta, pow(0.5333, 1.02)) * (0.1 / (1.02 - 1.0)), HG(theta, 0.8), 0.54));//max(invPi * rescale(0.06, -0.2, 0.8), HG(theta, 0.8));
+
+    vec3 lightPosition = (tracingTop.x > 0.0 ? tracingTop.x : max(0.0, tracingTop.y)) * direction;
+
+    //float t = max(0.0, RaySphereIntersection(vec3(lightPosition.x, planet_radius + clouds_height + clouds_thickness, lightPosition.z), worldLightVector, vec3(0.0), atmosphere_radius).y);
+    //vec3 lightColor = SimpleLightExtinction(vec3(lightPosition.x, planet_radius + clouds_height + clouds_thickness, lightPosition.z), worldSunVector, 0.5, 0.15);// * sunPhase * 3.0;
+    vec3 lightColor = SunLightingColor * sunPhase;
+
+    float dither = R2Dither(ApplyTAAJitter(texcoord) * resolution);
+    float dither2 = R2Dither(ApplyTAAJitter(1.0 - texcoord) * resolution);
+
+    vec3 rayOrigin = origin + direction * stepLength * dither;
+
+    vec3 MieSunLight = SunLightingColor * HG(theta, 0.76);
+    vec3 RayleightSunLight = SunLightingColor * ((3.0 / 16.0 / Pi) * (1.0 + theta * theta));
+    vec3 MieSunLight2 = SunLightingColor * HG(worldSunVector.y, 0.76);
+    vec3 RayleightSunLight2 = SunLightingColor * ((3.0 / 16.0 / Pi) * (1.0 + worldSunVector.y * worldSunVector.y));
+
+    float depth = 0.0;
+
+    for(int i = 0; i < steps; i++) {
+        //if(!isSky && landDistance < currentLength) break;
+
+        vec3 rayPosition = direction * currentLength + rayOrigin;
+
+        float height = isSky ? length(rayPosition - vec3(origin.x, 0.0, origin.z)) - planet_radius : max(1e-5, rayPosition.y - planet_radius);
+
+        float density = GetCloudsMap(rayPosition);
+              density = GetCloudsMapDetail(rayPosition, density, 0.2);
+              density = CalculateCloudsCoverage(height, density);
+
+        vec3 extinction = exp(-clouds_scattering * stepLength * density);
+
+        vec2 tracingLight = RaySphereIntersection(vec3(0.0, rayPosition.y, 0.0), worldSunVector, vec3(0.0), planet_radius + clouds_height + clouds_thickness);
+        tracingLight.y = min(6000.0, tracingLight.y);
+        vec3 lightExtinction = vec3(1.0);
+        
+        if(tracingLight.y > 0.0) {
+        float lightStepLength = tracingLight.y * invsteplight;
+        vec3 lightPosition = rayPosition + dither2 * worldSunVector * lightStepLength;
+
+        float opticalDepth = 0.0;
+
+        for(int j = 0; j < steplight; j++) {
+            float height = length(lightPosition - vec3(origin.x, 0.0, origin.z)) - planet_radius;
+
+            float density = GetCloudsMap(lightPosition);
+                  //density = saturate(rescale(density, 0.15, 0.8));
+                  density = GetCloudsMapDetail(rayPosition, density, 0.1);
+                  density = CalculateCloudsCoverage(height, density);
+
+            opticalDepth += density * lightStepLength;
+
+            lightPosition += lightStepLength * worldSunVector;
+        }
+
+        vec3 PowderEffect = 1.0 - exp(-clouds_scattering * (0.002 * tracingLight.y + opticalDepth) * 2.0);
+
+        lightExtinction = (exp(-clouds_scattering * opticalDepth) + exp(-clouds_scattering * opticalDepth * 0.25) * 0.7 + exp(-clouds_scattering * opticalDepth * 0.03) * 0.24) / (1.7 + 0.24);
+        lightExtinction *= PowderEffect;
+        }
+        
+        float Hr = exp(height / rayleigh_distribution) * Near_Atmosphere_Density;
+        vec3 Tr = (rayleigh_scattering + rayleigh_absorption) * Hr;
+        vec3 Sr = rayleigh_scattering * Hr;
+
+        float Hm = exp(height / mie_distribution) * Near_Atmosphere_Density;
+        vec3 Tm = (mie_scattering + mie_absorption) * Hm;
+        vec3 Sm = mie_scattering * Hm;
+
+        float s = currentLength * 0.5;
+
+        vec3 AtmosphereExtinction = exp(-(Tr + Tm) * s);
+        vec3 AtmosphereScattering = exp(-(Tr + Tm) * 0.25 * s) * s * ((Sr * RayleightSunLight + Sm * MieSunLight) + (Sr * RayleightSunLight2 + Sm * MieSunLight2) * extinction);
+        
+        vec3 CloudsScattering = lightColor * lightExtinction + SkyLightingColor * 0.047 * ((extinction + 0.5) / (1.0 + 0.5));
+             CloudsScattering = CloudsScattering * AtmosphereExtinction + AtmosphereScattering;
+             CloudsScattering *= clouds_scattering * density;
+
+        scattering += (CloudsScattering - CloudsScattering * extinction) * transmittance / max(vec3(1e-8), (1e-6 + clouds_scattering) * density);
+        //scattering += transmittance * CloudsScattering * stepLength;
+
+        transmittance *= extinction;
+
+        currentLength += stepLength;
+        //depth += stepLength * max(1e-3, density);
+    }
+
+    color *= transmittance;
+    color += scattering;
+}
+
 uniform sampler2D colortex8;
 uniform sampler2D colortex9;
 uniform sampler2D colortex10;
@@ -522,25 +744,27 @@ void main() {
     if(m.maskHand > 0.5) velocity *= 0.001;
     vec2 previousCoord = texcoord - velocity;
 
-    float depthWeight = (abs(ExpToLinerDepth(texture(colortex11, previousCoord).a) - v0.linearDepth) - 0.01) * 1.0;
-    float velocityWeight = length(velocity * resolution) * 0.0001;
+    float depthWeight = (abs(ExpToLinerDepth(texture(colortex11, previousCoord).a) - v0.linearDepth) - 0.01) * 1000.0;
+    float velocityWeight = length(velocity * resolution) * 0.1;
 
     float blend = 0.95 * step(abs(previousCoord.x - 0.5), 0.5) * step(abs(previousCoord.y - 0.5), 0.5);
           //blend *= 1.0 - clamp((abs(ExpToLinerDepth(texture(colortex11, previousCoord).a) - v0.linearDepth) - 0.01) * 2048.0, 0.0, 1.0);
           blend *= 1.0 - min(1.0, max(velocityWeight, depthWeight));
 
     //scattering = mix(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), blend);
-    //scattering = mix(scattering, texture(colortex11, previousCoord).rgb, blend);
+    scattering = mix(scattering, texture(colortex11, previousCoord).rgb, blend);
 
     if(m.maskWeather < 0.5) {
-        color *= transmittance;
-        color += scattering;
+        //color *= transmittance;
+        //color += scattering;
     }
 
     //if(totalWeight <= 1.0) color = vec3(1.0, 0.0, 0.0);
     #endif
     //color *= texture(colortex10, texcoord * 0.5).rgb;
     //color += texture(colortex9, texcoord * 0.5).rgb;
+
+    CalculateClouds(color, v1, m.maskSky > 0.5);
 
     color = color / (color + 1.0);
     color = GammaToLinear(color);
