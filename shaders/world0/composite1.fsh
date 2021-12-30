@@ -507,6 +507,36 @@ vec3 CalculateCloudsMediaSample(in float height) {
     return mix(vec3(0.09), vec3(0.05), height);
 }
 
+vec3 CalculateHighQualityLightingColor(in vec3 rayOrigin, in vec3 L) {
+    const int steps = 12;
+    const float invsteps = 1.0 / float(steps);
+
+    vec2 tracingPlanet = RaySphereIntersection(rayOrigin, L, vec3(0.0), planet_radius);
+    float planetShadow = tracingPlanet.x > 0.0 ? exp(-(tracingPlanet.y - tracingPlanet.x) * 0.00001) : 1.0;
+
+    vec2 t = RaySphereIntersection(rayOrigin, L, vec3(0.0), atmosphere_radius);
+    float stepLength = t.y * invsteps;
+
+    vec3 opticalDepth = vec3(0.0);
+
+    for(int i = 0; i < steps; i++) {
+        vec3 position = rayOrigin + (1.0 + float(i)) * stepLength * L;
+        float height = length(position) - planet_radius;
+
+        float Hm = exp(-height / mie_distribution);
+        float Hr = exp(-height / rayleigh_distribution);
+        float Ho = saturate(1.0 - abs(height - 25000.0) / 15000.0);
+
+        opticalDepth += (mie_scattering + mie_absorption) * Hm + (rayleigh_scattering + rayleigh_absorption) * Hr + (ozone_absorption + ozone_scattering) * Ho;
+    }
+
+    vec3 transmittance = exp(-opticalDepth * stepLength);
+
+    float phase = HG(0.99, 0.76);
+
+    return transmittance * phase * planetShadow;
+}
+
 void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
     vec3 direction = v.worldViewDirection;
 
@@ -558,20 +588,19 @@ void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
     float sunPhase = max(invPi * rescale(0.1, 0.0, 0.1), mix(HG(theta, pow(0.5333, 1.02)) * (0.1 / (1.02 - 1.0)), HG(theta, 0.8), 0.54));//max(invPi * rescale(0.06, -0.2, 0.8), HG(theta, 0.8));
 
     vec3 lightPosition = (tracingTop.x > 0.0 ? tracingTop.x : max(0.0, tracingTop.y)) * direction;
+    vec3 SunColor = CalculateHighQualityLightingColor(lightPosition + vec3(0.0, origin.y, 0.0), worldSunVector) * Sun_Light_Luminance;
 
-    //float t = max(0.0, RaySphereIntersection(vec3(lightPosition.x, planet_radius + clouds_height + clouds_thickness, lightPosition.z), worldLightVector, vec3(0.0), atmosphere_radius).y);
-    //vec3 lightColor = SimpleLightExtinction(vec3(lightPosition.x, planet_radius + clouds_height + clouds_thickness, lightPosition.z), worldSunVector, 0.5, 0.15);// * sunPhase * 3.0;
-    vec3 lightColor = SunLightingColor * sunPhase;
+    vec3 lightColor = SunColor * sunPhase;
 
     float dither = R2Dither(ApplyTAAJitter(texcoord) * resolution);
     float dither2 = R2Dither(ApplyTAAJitter(1.0 - texcoord) * resolution);
 
     vec3 rayOrigin = origin + direction * stepLength * dither;
 
-    vec3 MieSunLight = SunLightingColor * HG(theta, 0.76);
-    vec3 RayleightSunLight = SunLightingColor * ((3.0 / 16.0 / Pi) * (1.0 + theta * theta));
-    vec3 MieSunLight2 = SunLightingColor * HG(worldSunVector.y, 0.76);
-    vec3 RayleightSunLight2 = SunLightingColor * ((3.0 / 16.0 / Pi) * (1.0 + worldSunVector.y * worldSunVector.y));
+    vec3 MieSunLight = SunColor * HG(theta, 0.76);
+    vec3 RayleightSunLight = SunColor * ((3.0 / 16.0 / Pi) * (1.0 + theta * theta));
+    vec3 MieSunLight2 = SunColor * HG(worldSunVector.y, 0.76);
+    vec3 RayleightSunLight2 = SunColor * ((3.0 / 16.0 / Pi) * (1.0 + worldSunVector.y * worldSunVector.y));
 
     float depth = 0.0;
 
