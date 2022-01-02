@@ -38,14 +38,14 @@ void CalculatePlanetSurface(inout vec3 color, in vec3 LightColor0, in vec3 Light
     vec2 phaseMie = vec2(HG(cosTheta, 0.76), HG(-cosTheta, 0.76));
     float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + cosTheta * cosTheta);
 
-    float Hr = exp(-h / rayleigh_distribution) * Near_Atmosphere_Density * 20.0;
-    float Hm = exp(-h / mie_distribution) * Near_Atmosphere_Density * 20.0;
+    float Hr = exp(-h / rayleigh_distribution) * float(Near_Atmosphere_Density) * 2.0;
+    float Hm = exp(-h / mie_distribution) * float(Near_Atmosphere_Density) * 2.0;
 
     vec3 Tr = Hr * (rayleigh_absorption + rayleigh_scattering);
     vec3 Tm = Hm * (mie_absorption + mie_scattering);
 
-    float stepLength = t;
-    vec3 transmittance = exp(-stepLength * (Tr + Tm) * 0.5) * stepLength;
+    float stepLength = sqrt(pow2(t) + pow2(h));
+    vec3 transmittance = pow(exp(-stepLength * (Tr + Tm) * 0.25), vec3(0.8)) * stepLength;
 
     color = LightColor0 * transmittance * (phaseMie.x * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
     color += LightColor1 * transmittance * (phaseMie.y * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
@@ -252,7 +252,7 @@ void main() {
     color += emissiveColor;
     
     if(m.tile_mask == Mask_ID_Sky) {
-        vec3 rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1.0), 0.0);
+        vec3 rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * Altitude_Scale), 0.0);
         vec3 rayDirection = o.worldViewDirection;
 
         vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
@@ -262,7 +262,7 @@ void main() {
 
         DrawStars(color, o.worldViewDirection, starsFade, tracingPlanet.x);
         DrawMoon(color, worldMoonVector, o.worldViewDirection, tracingPlanet.x);
-        CalculatePlanetSurface(color, SunLightingColor, MoonLightingColor, worldSunVector, o.worldViewDirection, 1000.0, tracingPlanet.x);
+        //CalculatePlanetSurface(color, SunLightingColor, MoonLightingColor, worldSunVector, o.worldViewDirection, 1000.0, tracingPlanet.x - max(0.0, tracingAtmosphere.x));
 
         vec2 halfcoord = min(texcoord * 0.5 + texelSize, vec2(0.5) - texelSize);
 

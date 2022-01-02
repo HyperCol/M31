@@ -25,7 +25,7 @@ void main() {
     vec3 atmosphere_color = vec3(0.0);
     vec3 atmosphere_transmittance = vec3(1.0);
 
-    CalculateAtmosphericScattering(atmosphere_transmittance, atmosphere_color, vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * 1.0), 0.0), v.worldViewDirection, worldSunVector, vec2(0.0));
+    CalculateAtmosphericScattering(atmosphere_transmittance, atmosphere_color, vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * Altitude_Scale), 0.0), v.worldViewDirection, worldSunVector, vec2(0.0));
 
     gl_FragData[0] = vec4(atmosphere_color, 1.0);
     gl_FragData[1] = vec4(atmosphere_transmittance, 1.0);

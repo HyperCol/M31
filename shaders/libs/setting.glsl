@@ -12,6 +12,11 @@
 #define RGB 0
 #define Color_Temperature 1
 
+#define Shadow_Light 0 
+#define Sun 1
+#define Moon 2
+#define Both 3
+
 //Lighting Setting
 #define Sun_Light_Luminance 6.0
 #define Moon_Light_Luminance 0.1
@@ -52,8 +57,17 @@
 #define Translucent_Blocks_Quality High             //[Low High]
 
 //Atmosphere
-#define Clouds_Quality Medium                       //[Medium High Ultra]
-#define Clouds_Lighting_Quality Low                 //[Low High]
+#define Altitude_Scale 1.0                          //[1.0 10.0 25.0 50.0 75.0 100.0 250.0 500.0 750.0 1000.0]
+
+#define Clouds_Quality High                         //[Medium High Ultra]
+
+#define Clouds_Sun_Lighting_Tracing High            //[Medium Hight Ultra]
+#define Clouds_Moon_Lighting_Tracing Medium         //[Medium Hight Ultra]
+    #define Clouds_Tracing_Light_Source Shadow_Light //[Shadow_Light Sun Moon Both]
+    #define Clouds_Self_Shadow_Detail Low           //[Low High]
+
+#define Clouds_Sun_Lighting_Color Medium            //[Low Medium Ultra]
+#define Clouds_Moon_Lighting_Color Low              //[Low Medium Ultra]
 
 #define Near_Atmosphere_Quality High                //[Medium High Ultra]
     #define Near_Atmosphere_Density 2               //[1 2 3 4 5 6 7 8 9 10 20 30 40 50 60 70 80 90 100]
