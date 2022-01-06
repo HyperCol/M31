@@ -45,7 +45,7 @@ void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_colo
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), planet_radius);
 
     float end = tracingPlanet.x > 0.0 ? tracingPlanet.x : tracingAtmosphere.y;
-    float start = tracingAtmosphere.x > 0.0 ? tracingAtmosphere.x : 0.0;
+    float start = tracingAtmosphere.x > 0.0 ? tracingAtmosphere.x : Near_Atmosphere_End;
 
     float theta = dot(rayDirection, L);
     float miePhase = HG(theta, 0.76);

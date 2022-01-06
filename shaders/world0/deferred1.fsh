@@ -38,13 +38,13 @@ void CalculatePlanetSurface(inout vec3 color, in vec3 LightColor0, in vec3 Light
     vec2 phaseMie = vec2(HG(cosTheta, 0.76), HG(-cosTheta, 0.76));
     float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + cosTheta * cosTheta);
 
-    float Hr = exp(-h / rayleigh_distribution) * float(Near_Atmosphere_Density) * 2.0;
-    float Hm = exp(-h / mie_distribution) * float(Near_Atmosphere_Density) * 2.0;
+    float Hr = exp(-h / rayleigh_distribution) * float(Near_Atmosphere_Density) * 4.0;
+    float Hm = exp(-h / mie_distribution) * float(Near_Atmosphere_Density) * 4.0;
 
     vec3 Tr = Hr * (rayleigh_absorption + rayleigh_scattering);
     vec3 Tm = Hm * (mie_absorption + mie_scattering);
 
-    float stepLength = sqrt(pow2(t) + pow2(h));
+    float stepLength = min(40000.0, sqrt(pow2(t) + pow2(h)));
     vec3 transmittance = pow(exp(-stepLength * (Tr + Tm) * 0.25), vec3(0.8)) * stepLength;
 
     color = LightColor0 * transmittance * (phaseMie.x * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
@@ -159,37 +159,53 @@ vec3 LeavesShading(vec3 L, vec3 eye, vec3 n, vec3 albedo, vec3 sigma_t, vec3 sig
     return (R * albedo) * (invPi * phase * (1.0 - ndotl));
 }
 
+#include "/libs/noise.glsl"
+#include "/libs/volumetric/clouds_common.glsl"
+#include "/libs/volumetric/clouds_env.glsl"
+
 void main() {
     //material
     Gbuffers    m = GetGbuffersData(texcoord);
 
     //opaque
-    Vector      o = GetVector(texcoord, texture(depthtex0, texcoord).x);
+    Vector      v0 = GetVector(texcoord, texture(depthtex0, texcoord).x);
 
     AtmosphericData atmospheric = GetAtmosphericDate(timeFog, timeHaze);
 
     vec3 color = vec3(0.0);
 
+    vec3 origin = vec3(cameraPosition.x, cameraPosition.y - 63.0, cameraPosition.z) * Altitude_Scale;
+         origin.y = planet_radius + origin.y;
+
+
     float simplesss = m.fullBlock < 0.5 && m.material > 65.0 ? 1.0 : 0.0;
 
-    vec3 shading = CalculateShading(vec3(texcoord, o.depth), lightVector, m.geometryNormal, simplesss * 2.0);
-         shading *= ScreenSpaceContactShadow(m, o, lightVector, simplesss);
+    vec3 shading = CalculateShading(vec3(texcoord, v0.depth), lightVector, m.geometryNormal, simplesss * 2.0);
+         shading *= ScreenSpaceContactShadow(m, v0, lightVector, simplesss);
 
-    vec3 sunLight = DiffuseLighting(m, lightVector, o.eyeDirection) + SpecularLighting(m, lightVector, o.eyeDirection);
+    vec3 sunLight = DiffuseLighting(m, lightVector, v0.eyeDirection) + SpecularLighting(m, lightVector, v0.eyeDirection);
 
     if(simplesss > 0.5 && m.material > 65.0) {
-        sunLight += LeavesShading(lightVector, o.eyeDirection, m.texturedNormal, m.albedo.rgb, m.transmittance, m.scattering);
+        sunLight += LeavesShading(lightVector, v0.eyeDirection, m.texturedNormal, m.albedo.rgb, m.transmittance, m.scattering);
     }
 
-    float tracingFogSun = max(0.0, IntersectPlane(vec3(0.0, o.wP.y + cameraPosition.y - 63.0, 0.0), worldLightVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
+    float tracingFogSun = max(0.0, IntersectPlane(vec3(0.0, v0.wP.y + cameraPosition.y - 63.0, 0.0), worldLightVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
     vec3 sunLightExtinction = min(vec3(1.0), CalculateFogLight(tracingFogSun, atmospheric.fogTransmittance) * CalculateFogPhaseFunction(1.0 - 1e-5, atmospheric) / HG(0.9, 0.76));
+
+    #if Clouds_Shadow_Quality > OFF
+        #if Clouds_Shadow_Quality < High
+        shading *= CloudsShadow(v0.wP, worldLightVector, origin, vec2(0.1, 0.9), Ultra);
+        #else
+        shading *= CloudsShadowRayMarching(v0.wP, worldLightVector, origin, vec2(0.1, 0.9), Clouds_Shadow_Quality);
+        #endif
+    #endif
 
     color += sunLight * LightingColor * shading * shadowFade * sunLightExtinction;
 
-    float tracingFogUp = max(0.0, IntersectPlane(vec3(0.0, o.wP.y + cameraPosition.y - 63.0, 0.0), worldUpVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
+    float tracingFogUp = max(0.0, IntersectPlane(vec3(0.0, v0.wP.y + cameraPosition.y - 63.0, 0.0), worldUpVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
     vec3 skyLightExtinction = CalculateFogLight(tracingFogUp, atmospheric.fogTransmittance);
 
-    float ao = ScreenSpaceAmbientOcclusion(m, o);
+    float ao = ScreenSpaceAmbientOcclusion(m, v0);
 
     float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0));
     float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 8.0, 1.0));
@@ -202,6 +218,14 @@ void main() {
          AmbientLight += m.albedo * AmbientLightColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
          AmbientLight *= mix(SkyLighting0, SkyLighting1, 0.7) * (1.0 - m.metal) * (1.0 - m.metallic);
 
+    #if Clouds_Sky_Occlusion_Quality > OFF
+        #if Clouds_Sky_Occlusion_Quality < High
+        AmbientLight *= CloudsShadow(v0.wP, worldUpVector, origin, vec2(0.1, 0.9), Clouds_Sky_Occlusion_Quality);
+        #else
+        AmbientLight *= CloudsShadowRayMarching(v0.wP, worldUpVector, origin, vec2(0.1, 0.9), Clouds_Sky_Occlusion_Quality);
+        #endif
+    #endif
+
     color += AmbientLight * skyLightExtinction;
 
     vec3 handHeldLight = m.albedo * invPi * BlockLightingColor * (float(heldBlockLightValue) + float(heldBlockLightValue2)) / 15.0;
@@ -210,8 +234,8 @@ void main() {
     vec3 handOffset = nvec3(gbufferProjectionInverse * nvec4(vec3(1.0, 0.5, 0.0) * 2.0 - 1.0)) * vec3(1.0, 1.0, 0.0);
     if(m.tile_mask == MaskIDHand) handOffset = vec3(0.0);
 
-    vec3 lP1 = o.vP - handOffset * 4.0;
-    vec3 lP2 = o.vP + handOffset * 4.0;
+    vec3 lP1 = v0.vP - handOffset * 4.0;
+    vec3 lP2 = v0.vP + handOffset * 4.0;
 
     float heldLightDistance1 = min(3.0, 1.0 / pow2(length(lP1)));
     float heldLightDistance2 = min(3.0, 1.0 / pow2(length(lP2)));
@@ -219,20 +243,20 @@ void main() {
     lP1 = normalize(lP1);
     lP2 = normalize(lP2);
 
-    vec3 heldLight1  = BlockLightingColor * SpecularLighting(m, -lP1, o.eyeDirection) * heldLightDistance1;
-         heldLight1 += BlockLightingColor * DiffuseLighting(m, -lP1, o.eyeDirection) * max(0.0, rescale(heldLightDistance1, 1e-3, 1.0));
+    vec3 heldLight1  = BlockLightingColor * SpecularLighting(m, -lP1, v0.eyeDirection) * heldLightDistance1;
+         heldLight1 += BlockLightingColor * DiffuseLighting(m, -lP1, v0.eyeDirection) * max(0.0, rescale(heldLightDistance1, 1e-3, 1.0));
          heldLight1 *= float(heldBlockLightValue) / 15.0;
     
-    vec3 heldLight2  = BlockLightingColor * SpecularLighting(m, -lP2, o.eyeDirection) * heldLightDistance2;
-         heldLight2 += BlockLightingColor * DiffuseLighting(m, -lP2, o.eyeDirection) * max(0.0, rescale(heldLightDistance2, 1e-3, 1.0)) * 6.0;
+    vec3 heldLight2  = BlockLightingColor * SpecularLighting(m, -lP2, v0.eyeDirection) * heldLightDistance2;
+         heldLight2 += BlockLightingColor * DiffuseLighting(m, -lP2, v0.eyeDirection) * max(0.0, rescale(heldLightDistance2, 1e-3, 1.0)) * 6.0;
          heldLight2 *= float(heldBlockLightValue2) / 15.0;
 
     color += heldLight1 + heldLight2;
     #else
-    float heldLightDistance = min(3.0, 1.0 / pow2(o.viewLength));
+    float heldLightDistance = min(3.0, 1.0 / pow2(v0.viewLength));
 
-    vec3 heldLight  = BlockLightingColor * SpecularLighting(m, o.eyeDirection, o.eyeDirection) * heldLightDistance;
-         heldLight += BlockLightingColor * DiffuseLighting(m, o.eyeDirection, o.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-3, 1.0)) * 6.0;
+    vec3 heldLight  = BlockLightingColor * SpecularLighting(m, v0.eyeDirection, v0.eyeDirection) * heldLightDistance;
+         heldLight += BlockLightingColor * DiffuseLighting(m, v0.eyeDirection, v0.eyeDirection) * max(0.0, rescale(heldLightDistance, 1e-3, 1.0)) * 6.0;
          heldLight *= max(float(heldBlockLightValue), float(heldBlockLightValue2)) / 15.0;
     
     color += heldLight;
@@ -247,22 +271,27 @@ void main() {
     color += blockLight;
 
     vec3 emissiveColor = m.albedo;
-         emissiveColor *= invPi * m.emissive;// * (1.0 - SchlickFresnel(dot(o.eyeDirection, normalize(o.eyeDirection + normalize(reflect(o.viewDirection, m.geometryNormal))))));
+         emissiveColor *= invPi * m.emissive;// * (1.0 - SchlickFresnel(dot(v0.eyeDirection, normalize(v0.eyeDirection + normalize(reflect(v0.viewDirection, m.geometryNormal))))));
 
     color += emissiveColor;
     
     if(m.tile_mask == Mask_ID_Sky) {
         vec3 rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * Altitude_Scale), 0.0);
-        vec3 rayDirection = o.worldViewDirection;
+        vec3 rayDirection = v0.worldViewDirection;
 
         vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
         vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), planet_radius);
 
         color = vec3(0.0);
 
-        DrawStars(color, o.worldViewDirection, starsFade, tracingPlanet.x);
-        DrawMoon(color, worldMoonVector, o.worldViewDirection, tracingPlanet.x);
-        //CalculatePlanetSurface(color, SunLightingColor, MoonLightingColor, worldSunVector, o.worldViewDirection, 1000.0, tracingPlanet.x - max(0.0, tracingAtmosphere.x));
+        DrawStars(color, v0.worldViewDirection, starsFade, tracingPlanet.x);
+        DrawMoon(color, worldMoonVector, v0.worldViewDirection, tracingPlanet.x);
+        CalculatePlanetSurface(color, SunLightingColor, MoonLightingColor, worldSunVector, v0.worldViewDirection, 1000.0, tracingPlanet.x - max(0.0, tracingAtmosphere.x));
+
+        vec2 tracingSun = RaySphereIntersection(rayOrigin + tracingPlanet.x * rayDirection, worldSunVector, vec3(0.0), atmosphere_radius);
+        vec2 tracingMoon = RaySphereIntersection(rayOrigin + tracingPlanet.x * rayDirection, worldMoonVector, vec3(0.0), atmosphere_radius);
+        float penmubra = (tracingSun.x > 0.0 ? 1.0 : exp(-tracingSun.y * 0.00001)) + (tracingMoon.x > 0.0 ? 1.0 : exp(-tracingMoon.y * 0.00001));
+        //color += vec3(1.0) * invPi * step(0.0, tracingPlanet.x) * penmubra;
 
         vec2 halfcoord = min(texcoord * 0.5 + texelSize, vec2(0.5) - texelSize);
 
@@ -280,6 +309,6 @@ void main() {
     gl_FragData[0] = vec4(texture(colortex0, texcoord).rgb, 0.0);
     gl_FragData[1] = vec4(color, texture(colortex1, texcoord).r);
     //gl_FragData[1] = vec4(texture(gnormal, texcoord).zw, v.depth, 1.0);
-    gl_FragData[2] = vec4(vec2(0.0), o.depth, 1.0);
+    gl_FragData[2] = vec4(vec2(0.0), v0.depth, 1.0);
 }
 /* DRAWBUFFERS:034 */
