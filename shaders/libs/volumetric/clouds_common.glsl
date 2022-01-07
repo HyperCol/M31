@@ -1,5 +1,5 @@
 const float     clouds_height       = 1500.0;
-const float     clouds_thickness    = 1000.0;
+const float     clouds_thickness    = 800.0;
 const vec3      clouds_scattering   = vec3(0.08);
 
 vec2 TracingCloudsLayer(in vec3 origin, in vec3 direction) {
@@ -18,14 +18,24 @@ vec2 TracingCloudsLayer(in vec3 origin, in vec3 direction) {
     return vec2(rayStart, rayEnd);
 }
 
-float GetCloudsMap(in vec3 position) {
+float GetCloudsMap(in vec3 position, in float height) {
     vec3 worldPosition = vec3(position.x, position.z, position.y - planet_radius);
+
+    float t = frameTimeCounter * Clouds_Speed;
+
+    //worldPosition.x += t * Clouds_X_Speed;
+    worldPosition.x += height / (clouds_thickness) * Clouds_X_Speed;
+
+    //worldPosition.z += t * Clouds_Y_Speed;
+    worldPosition.z += height / (clouds_thickness) * Clouds_Y_Speed;
 
     vec3 shapeCoord = worldPosition * 0.0005;
     float shape = (noise(shapeCoord.xy) + noise(shapeCoord.xy * 2.0) * 0.5) / 1.5;
     float shape2 = (noise(shapeCoord * 4.0) + noise(shapeCoord.xy * 8.0) * 0.5) / 1.5;
 
-    float density = max(0.0, rescale((shape + shape2 * 0.5) / 1.5, 0.1, 1.0));
+    //shape = max(0.0, rescale(shape, 0.2, 1.0));
+
+    float density = max(0.0, rescale((shape + shape2 * 0.25) / 1.25, 0.0, 1.0));
 
     return density;
 }
@@ -40,7 +50,7 @@ float GetCloudsMapDetail(in vec3 position, in float shape, in float distortion) 
 } 
 
 float GetCloudsCoverage(in float linearHeight) {
-    return pow(0.75, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.5)) * saturate(rescale(linearHeight, -0.05, 0.1)));
+    return pow(0.75, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.3)) * saturate(rescale(linearHeight, -0.05, 0.1)));
 }
 
 float CalculateCloudsCoverage(in float height, in float clouds) {
@@ -66,7 +76,7 @@ vec3 CloudsLocalLighting(in vec3 opticalDepth) {
 vec4 CalculateCloudsMedia(in vec3 rayPosition, in vec3 origin) {
     float height = length(rayPosition - vec3(origin.x, 0.0, origin.z)) - planet_radius;
 
-    float density = GetCloudsMap(rayPosition);
+    float density = GetCloudsMap(rayPosition, height);
           density = GetCloudsMapDetail(rayPosition, density, 0.2);
           density = CalculateCloudsCoverage(height, density);
 

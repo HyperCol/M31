@@ -194,9 +194,9 @@ void main() {
 
     #if Clouds_Shadow_Quality > OFF
         #if Clouds_Shadow_Quality < High
-        shading *= CloudsShadow(v0.wP, worldLightVector, origin, vec2(0.1, 0.9), Ultra);
+        shading *= CloudsShadow(v0.wP, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
         #else
-        shading *= CloudsShadowRayMarching(v0.wP, worldLightVector, origin, vec2(0.1, 0.9), Clouds_Shadow_Quality);
+        shading *= CloudsShadowRayMarching(v0.wP, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
         #endif
     #endif
 
@@ -220,9 +220,9 @@ void main() {
 
     #if Clouds_Sky_Occlusion_Quality > OFF
         #if Clouds_Sky_Occlusion_Quality < High
-        AmbientLight *= CloudsShadow(v0.wP, worldUpVector, origin, vec2(0.1, 0.9), Clouds_Sky_Occlusion_Quality);
+        AmbientLight *= CloudsShadow(v0.wP, worldUpVector, origin, vec2(Clouds_Sky_Occlusion_Tracing_Bottom, Clouds_Sky_Occlusion_Tracing_Top), Clouds_Sky_Occlusion_Transmittance, Clouds_Sky_Occlusion_Quality);
         #else
-        AmbientLight *= CloudsShadowRayMarching(v0.wP, worldUpVector, origin, vec2(0.1, 0.9), Clouds_Sky_Occlusion_Quality);
+        AmbientLight *= CloudsShadowRayMarching(v0.wP, worldUpVector, origin, vec2(Clouds_Sky_Occlusion_Tracing_Bottom, Clouds_Sky_Occlusion_Tracing_Top), Clouds_Sky_Occlusion_Transmittance, Clouds_Sky_Occlusion_Quality);
         #endif
     #endif
 

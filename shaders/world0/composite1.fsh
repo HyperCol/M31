@@ -488,7 +488,7 @@ vec3 CalculateCloudsLightExtinction(in vec3 rayPosition, in vec3 L, in vec3 rayO
     vec3 lightExtinction = vec3(1.0);
         
     if(tracingLight.y > 0.0) {
-        float lightStepLength = min(6000.0, tracingLight.y) * invsteps;
+        float lightStepLength = min(8000.0, tracingLight.y) * invsteps;
         vec3 lightPosition = rayPosition + dither * L * lightStepLength;
 
         float opticalDepth = 0.0;
@@ -496,7 +496,7 @@ vec3 CalculateCloudsLightExtinction(in vec3 rayPosition, in vec3 L, in vec3 rayO
         for(int j = 0; j < steps; j++) {
             float height = isSky ? length(lightPosition - vec3(rayOrigin.x, 0.0, rayOrigin.z)) - planet_radius : lightPosition.y - planet_radius;
 
-            float density = GetCloudsMap(lightPosition);
+            float density = GetCloudsMap(lightPosition, height);
 
             #if Clouds_Self_Shadow_Detail == Low
             density = saturate(rescale(density, 0.2, 0.8));
@@ -511,7 +511,7 @@ vec3 CalculateCloudsLightExtinction(in vec3 rayPosition, in vec3 L, in vec3 rayO
             lightPosition += lightStepLength * L;
         }
 
-        vec3 PowderEffect = CloudsPowderEffect(max(clouds_scattering * 2.0, clouds_scattering * opticalDepth));//1.0 - exp(-clouds_scattering * (0.002 * tracingLight.y + opticalDepth) * 2.0);
+        vec3 PowderEffect = CloudsPowderEffect(max(clouds_scattering * 8.0, clouds_scattering * opticalDepth));//1.0 - exp(-clouds_scattering * (0.002 * tracingLight.y + opticalDepth) * 2.0);
 
         lightExtinction = (exp(-clouds_scattering * opticalDepth) + exp(-clouds_scattering * opticalDepth * 0.25) * 0.7 + exp(-clouds_scattering * opticalDepth * 0.03) * 0.24) / (1.7 + 0.24);
         lightExtinction *= PowderEffect;
@@ -556,7 +556,7 @@ void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
 
     if(origin.y > planet_radius + clouds_height && tracingTop.x < 0.0) {
         start = 0.0;
-        end = 128.0 * Altitude_Scale;
+        end = 256.0 * Altitude_Scale;
         tracingPaneTop = min(tracingPaneTop, end);
         lightPosition = vec3(tracingPaneTop * direction.x, planet_radius + clouds_height + clouds_thickness, tracingPaneTop * direction.z);
     }
@@ -571,7 +571,7 @@ void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
     vec3 scattering = vec3(0.0);
 
     float theta = dot(worldSunVector, direction);
-    float sunPhase = max(invPi * rescale(0.1, 0.0, 0.1), mix(HG(theta, pow(0.5333, 1.02)) * (0.1 / (1.02 - 1.0)), HG(theta, 0.8), 0.54)) * HG(0.95, 0.76);
+    float sunPhase = max(invPi * rescale(0.1, 0.0, 0.1), mix(HG(theta, pow(0.5333, 1.1)) * (0.1 / (1.1 - 1.0)), HG(theta, 0.8), 0.54)) * HG(0.95, 0.76);
     float moonPhase = max(invPi * rescale(0.1, 0.0, 0.1), mix(HG(-theta, pow(0.5333, 1.2)) * (0.1 / (1.2 - 1.0)), HG(-theta, 0.8), 0.54)) * HG(0.95, 0.76);
 
     #if Clouds_Sun_Lighting_Color == High
@@ -631,7 +631,7 @@ void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
             vec3 CloudsScattering = S1 + SkyLightingColor * 0.047 * ((extinction + 0.5) / (1.0 + 0.5));
                  CloudsScattering *= mediaSample.rgb;
 
-            scattering += (CloudsScattering - CloudsScattering * extinction) * transmittance / (clouds_scattering * rescale(density, -0.05, 1.0));
+            scattering += (CloudsScattering - CloudsScattering * extinction) * transmittance / (clouds_scattering * max(density, 1e-5));
 
             transmittance *= extinction;
 
