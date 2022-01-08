@@ -520,7 +520,7 @@ vec3 CalculateCloudsLightExtinction(in vec3 rayPosition, in vec3 L, in vec3 rayO
     return lightExtinction;
 }
 
-void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
+void CalculateClouds(inout vec3 color, in Vector v, inout float outDepth, in bool isSky) {
     vec3 direction = v.worldViewDirection;
 
     vec3 origin = vec3(cameraPosition.x, cameraPosition.y - 63.0, cameraPosition.z) * Altitude_Scale;
@@ -653,6 +653,8 @@ void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
     vec3 RayleightSunLight2 = (SunColor + MoonColor) * ((3.0 / 16.0 / Pi) * (1.0 + worldSunVector.y * worldSunVector.y));
 
     if(clouds > 0.5) {
+        outDepth = nvec3(gbufferProjection * nvec4(v.viewDirection * depth / Altitude_Scale)).z * 0.5 + 0.5;
+
         const int assteps = 12;
         const float asinvsteps = 1.0 / float(steps);
 
@@ -833,15 +835,18 @@ void main() {
 
     //    color *= CloudsShadowRayMarching(v0.wP, worldLightVector, origin, vec2(0.1, 0.7), Ultra);
     //}
+    
+    float withCloudsDepth = v0.depth;
 
-    CalculateClouds(color, v1, m.maskSky > 0.5);
+    CalculateClouds(color, v1, withCloudsDepth, m.maskSky > 0.5);
 
     color = color / (color + 1.0);
     color = GammaToLinear(color);
 
     gl_FragData[0] = vec4(color, 1.0);
-    gl_FragData[1] = vec4(transmittance, 1.0);
-    gl_FragData[2] = vec4(scattering, mix(v0.depth, texture(colortex11, previousCoord).a, blend));
+    gl_FragData[1] = vec4(withCloudsDepth, vec3(0.0));
+    gl_FragData[2] = vec4(transmittance, 1.0);
+    gl_FragData[3] = vec4(scattering, mix(v0.depth, texture(colortex11, previousCoord).a, blend));
 }
 /* DRAWBUFFERS:34AB */
-/* RENDERTARGETS: 3,10,11 */
+/* RENDERTARGETS: 3,4,10,11 */
