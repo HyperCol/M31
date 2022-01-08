@@ -603,6 +603,7 @@ void CalculateClouds(inout vec3 color, in Vector v, inout float outDepth, in boo
     vec3 rayOrigin = origin + direction * stepLength * dither;
 
     float depth = 0.0;
+    float depthStart = start;
     float total = 0.0;
     float clouds = 0.0;
 
@@ -643,12 +644,14 @@ void CalculateClouds(inout vec3 color, in Vector v, inout float outDepth, in boo
             total += 1.0;
     
             clouds = 1.0;
+        }else{
+            depthStart += stepLength;
         }
 
         currentLength += stepLength;
     }
 
-    depth = depth / total + start;
+    depth = depth / total + depthStart;
 
     vec3 MieSunLight = SunColor * HG(theta, 0.76) + MoonColor * HG(-theta, 0.76);
     vec3 RayleightSunLight = (SunColor + MoonColor) * ((3.0 / 16.0 / Pi) * (1.0 + theta * theta));
