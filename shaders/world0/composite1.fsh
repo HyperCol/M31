@@ -479,7 +479,7 @@ vec3 CalculateHighQualityLightingColor(in vec3 rayOrigin, in vec3 L) {
     return transmittance * planetShadow;
 }
 
-vec3 CalculateCloudsLightExtinction(in vec3 rayPosition, in vec3 L, in vec3 rayOrigin, in float dither, in float level, in bool isSky) {
+vec3 CalculateCloudsLightExtinction(in vec3 rayPosition, in vec3 L, in vec3 rayOrigin, in float dither, in float level) {
     int steps = level == High ? 6 : level < High ? 3 : 9;
     float invsteps = 1.0 / float(steps);
 
@@ -494,7 +494,7 @@ vec3 CalculateCloudsLightExtinction(in vec3 rayPosition, in vec3 L, in vec3 rayO
         float opticalDepth = 0.0;
 
         for(int j = 0; j < steps; j++) {
-            float height = isSky ? length(lightPosition - vec3(rayOrigin.x, 0.0, rayOrigin.z)) - planet_radius : lightPosition.y - planet_radius;
+            float height = length(lightPosition - vec3(rayOrigin.x, 0.0, rayOrigin.z)) - planet_radius;
 
             float density = GetCloudsMap(lightPosition, height);
 
@@ -554,7 +554,7 @@ void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
     float tracingPaneBottom = abs(IntersectPlane(vec3(0.0, origin.y, 0.0), direction, vec3(0.0, planet_radius + clouds_height, 0.0), vec3(0.0, 1.0, 0.0)));
     float tracingPaneTop = abs(IntersectPlane(vec3(0.0, origin.y, 0.0), direction, vec3(0.0, planet_radius + clouds_height + clouds_thickness, 0.0), vec3(0.0, 1.0, 0.0)));
 
-    if(origin.y > planet_radius + clouds_height && tracingTop.x < 0.0) {
+    if(origin.y > planet_radius + clouds_height && tracingTop.x < 0.0 && tracingTop.y > 0.0) {
         start = 0.0;
         end = 256.0 * Altitude_Scale;
         tracingPaneTop = min(tracingPaneTop, end);
@@ -599,13 +599,14 @@ void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
 
     vec3 rayOrigin = origin + direction * stepLength * dither;
 
-    float depth = start;
+    float depth = 0.0;
+    float total = 0.0;
     float clouds = 0.0;
 
     for(int i = 0; i < steps; i++) {
-        if(!isSky && landDistance - stepLength * 0.5 < currentLength) break;
+        if(!isSky && landDistance - stepLength * 0.5 < currentLength || float(i) > 12) break;
 
-        if(maxComponent(transmittance) < 1e-4) {
+        if(maxComponent(transmittance) < 0.1) {
             transmittance = vec3(0.0, 0.0, 0.0);
             break;
         }
@@ -619,27 +620,32 @@ void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
             vec3 extinction = exp(-mediaSample.rgb * stepLength);
 
             #if Clouds_Tracing_Light_Source == Both
-            vec3 S1 = SunLight * CalculateCloudsLightExtinction(rayPosition, worldSunVector, origin, dither2, Clouds_Sun_Lighting_Tracing, isSky) + MoonLight * CalculateCloudsLightExtinction(rayPosition, -worldSunVector, origin, dither2, Clouds_Moon_Lighting_Tracing, isSky);        
+            vec3 S1 = SunLight * CalculateCloudsLightExtinction(rayPosition, worldSunVector, origin, dither2, Clouds_Sun_Lighting_Tracing) + MoonLight * CalculateCloudsLightExtinction(rayPosition, -worldSunVector, origin, dither2, Clouds_Moon_Lighting_Tracing);        
             #elif Clouds_Tracing_Light_Source == Sun
-            vec3 S1 = SunLight * CalculateCloudsLightExtinction(rayPosition, worldSunVector, origin, dither2, High, isSky);
+            vec3 S1 = SunLight * CalculateCloudsLightExtinction(rayPosition, worldSunVector, origin, dither2, High);
             #elif Clouds_Tracing_Light_Source == Moon
-            vec3 S1 = MoonLight * CalculateCloudsLightExtinction(rayPosition, worldMoonVector, origin, dither2, High, isSky);        
+            vec3 S1 = MoonLight * CalculateCloudsLightExtinction(rayPosition, worldMoonVector, origin, dither2, High);        
             #else
-            vec3 S1 = (MoonLight + SunLight) * CalculateCloudsLightExtinction(rayPosition, worldLightVector, origin, dither2, High, isSky);
+            vec3 S1 = (MoonLight + SunLight) * CalculateCloudsLightExtinction(rayPosition, worldLightVector, origin, dither2, High);
             #endif
 
             vec3 CloudsScattering = S1 + SkyLightingColor * 0.047 * ((extinction + 0.5) / (1.0 + 0.5));
                  CloudsScattering *= mediaSample.rgb;
 
-            scattering += (CloudsScattering - CloudsScattering * extinction) * transmittance / (clouds_scattering * max(density, 1e-5));
+            scattering += (CloudsScattering - CloudsScattering * extinction) * transmittance / (clouds_scattering * rescale(density, -0.01, 1.0));
 
             transmittance *= extinction;
 
+            depth += stepLength;
+            total += 1.0;
+    
             clouds = 1.0;
         }
 
         currentLength += stepLength;
     }
+
+    depth = depth / total + start;
 
     vec3 MieSunLight = SunColor * HG(theta, 0.76) + MoonColor * HG(-theta, 0.76);
     vec3 RayleightSunLight = (SunColor + MoonColor) * ((3.0 / 16.0 / Pi) * (1.0 + theta * theta));
@@ -650,15 +656,8 @@ void CalculateClouds(inout vec3 color, in Vector v, in bool isSky) {
         const int assteps = 12;
         const float asinvsteps = 1.0 / float(steps);
 
-        vec2 tracingCloudsMiddle = RaySphereIntersection(vec3(0.0, origin.y, 0.0), direction, vec3(0.0), planet_radius + clouds_height + clouds_thickness * 0.5);
-
-        float rayStart = max(0.0, max(0.0, tracingCloudsMiddle.x) - max(0.0, tracingAtmoshphere.x));
-        float rayEnd = tracingPlanet.x > 0.0 ? tracingPlanet.x : tracingCloudsMiddle.y;
-
-        if(!isSky) {
-            rayStart = 0.0;
-            rayEnd = landDistance;
-        }
+        float rayStart = 0.0;
+        float rayEnd = depth;
 
         float rayStepLength = (rayEnd - rayStart) * asinvsteps;
 
@@ -834,7 +833,7 @@ void main() {
 
     //    color *= CloudsShadowRayMarching(v0.wP, worldLightVector, origin, vec2(0.1, 0.7), Ultra);
     //}
-    
+
     CalculateClouds(color, v1, m.maskSky > 0.5);
 
     color = color / (color + 1.0);
@@ -844,5 +843,5 @@ void main() {
     gl_FragData[1] = vec4(transmittance, 1.0);
     gl_FragData[2] = vec4(scattering, mix(v0.depth, texture(colortex11, previousCoord).a, blend));
 }
-/* DRAWBUFFERS:3AB */
+/* DRAWBUFFERS:34AB */
 /* RENDERTARGETS: 3,10,11 */
