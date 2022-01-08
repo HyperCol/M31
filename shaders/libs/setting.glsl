@@ -82,8 +82,8 @@
 //#define Clouds_Shadow_On_Atmosphric_Scattering      //WIP
 
 #define Clouds_Speed 1.0                            //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
-#define Clouds_X_Speed 25.0
-#define Clouds_Vertical_Speed -40.0
+#define Clouds_X_Speed 38.0
+#define Clouds_Vertical_Speed -60.0
 
 #define Rain_Clouds_Quality Medium                  //[Medium High Ultra]
 

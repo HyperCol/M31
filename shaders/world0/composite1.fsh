@@ -656,7 +656,15 @@ void CalculateClouds(inout vec3 color, in Vector v, inout float outDepth, in boo
     vec3 RayleightSunLight2 = (SunColor + MoonColor) * ((3.0 / 16.0 / Pi) * (1.0 + worldSunVector.y * worldSunVector.y));
 
     if(clouds > 0.5) {
-        outDepth = nvec3(gbufferProjection * nvec4(v.viewDirection * depth / Altitude_Scale)).z * 0.5 + 0.5;
+        float t = (frameTimeCounter) * Clouds_Speed;
+
+        vec3 cloudsPosition = v.viewDirection * depth;
+
+        cloudsPosition.x += t * Clouds_X_Speed;
+        cloudsPosition.y += t * Clouds_Vertical_Speed;
+        cloudsPosition.y += -t * Clouds_Vertical_Speed * 0.25;
+
+        outDepth = nvec3(gbufferProjection * nvec4(cloudsPosition / Altitude_Scale)).z * 0.5 + 0.5;
 
         const int assteps = 12;
         const float asinvsteps = 1.0 / float(steps);

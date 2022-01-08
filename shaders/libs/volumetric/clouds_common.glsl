@@ -22,13 +22,11 @@ vec2 TracingCloudsLayer(in vec3 origin, in vec3 direction) {
 float GetCloudsMap(in vec3 position, in float linearHeight) {
     vec3 worldPosition = vec3(position.x, position.z, position.y - planet_radius);
 
-    float t = frameTimeCounter * Clouds_Speed;
+    float t = (frameTimeCounter) * Clouds_Speed;
 
     worldPosition.x += t * Clouds_X_Speed;
     worldPosition.x += linearHeight / (clouds_thickness) * Clouds_X_Speed;
-
     worldPosition.z += t * Clouds_Vertical_Speed;
-    //worldPosition.z += linearHeight / (clouds_thickness) * Clouds_Vertical_Speed;
 
     vec3 shapeCoord = worldPosition * 0.0005;
     float shape = (noise(shapeCoord.xy) + noise(shapeCoord.xy * 2.0) * 0.5) / 1.5;
@@ -42,8 +40,8 @@ float GetCloudsMap(in vec3 position, in float linearHeight) {
 float GetCloudsMapDetail(in vec3 position, in float shape, in float distortion) {
     vec3 worldPosition = vec3(position.x, position.z, position.y - planet_radius);
 
-    float t = frameTimeCounter * Clouds_Speed;
-    worldPosition.z += -t * Clouds_Vertical_Speed;
+    float t = (frameTimeCounter) * Clouds_Speed;
+    worldPosition.z += -t * Clouds_Vertical_Speed * 0.25;
 
     vec3 noiseCoord0 = worldPosition * 0.01;
     float noise0 = (noise(noiseCoord0) + noise(noiseCoord0 * 2.0) * 0.5 + noise(noiseCoord0 * 4.0) * 0.25) / (1.75);
@@ -52,7 +50,7 @@ float GetCloudsMapDetail(in vec3 position, in float shape, in float distortion) 
 } 
 
 float GetCloudsCoverage(in float linearHeight) { 
-    return pow(0.8, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.4)) * saturate(rescale(linearHeight, -0.05, 0.1)) * saturate(remap(linearHeight, 0.95, 1.0, 1.0, 0.0)));
+    return pow(0.8, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.5)) * saturate(rescale(linearHeight, -0.05, 0.1)) * saturate(remap(linearHeight, 0.95, 1.0, 1.0, 0.0)));
 }
 
 float CalculateCloudsCoverage(in float height, in float clouds) {
