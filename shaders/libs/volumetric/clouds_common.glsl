@@ -1,6 +1,11 @@
 const float     clouds_height       = 1500.0;
 const float     clouds_thickness    = 800.0;
+
+#ifndef Clouds_Shadow_On_Atmosphric_Scattering
 const vec3      clouds_scattering   = vec3(0.08);
+#else
+const vec3      clouds_scattering   = vec3(0.05);
+#endif
 
 vec2 TracingCloudsLayer(in vec3 origin, in vec3 direction) {
     vec2 tracingBottom = RaySphereIntersection(origin, direction, vec3(0.0), planet_radius + clouds_height);

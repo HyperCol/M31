@@ -449,7 +449,10 @@ vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint, floa
 }
 
 #include "/libs/volumetric/clouds_common.glsl"
-//#include "/libs/volumetric/clouds_env.glsl"
+
+#ifdef Clouds_Shadow_On_Atmosphric_Scattering
+#include "/libs/volumetric/clouds_env.glsl"
+#endif
 
 vec3 CalculateHighQualityLightingColor(in vec3 rayOrigin, in vec3 L) {
     const int steps = 6;
@@ -684,20 +687,10 @@ void CalculateClouds(inout vec3 color, in Vector v, inout float outDepth, in boo
             vec3 m = MieSunLight * mie_scattering * density_mie;
 
             vec3 S = r + m;
-/*
-            vec2 tracingCloudsBottom = RaySphereIntersection(rayPosition + vec3(0.0, origin.y, 0.0), direction, vec3(0.0), planet_radius + clouds_height);
-            vec2 tracingCloudsTop = RaySphereIntersection(rayPosition + vec3(0.0, origin.y, 0.0), direction, vec3(0.0), planet_radius + clouds_height);
+            #ifdef Clouds_Shadow_On_Atmosphric_Scattering
+            S *= CloudsShadow(rayPosition - origin, worldLightVector, origin, vec2(0.1, 1.0), 1.0, 1);
+            #endif
 
-            float opticalDepth = abs((tracingCloudsBottom.x > 0.0 ? tracingCloudsBottom.x : max(0.0, tracingCloudsBottom.y)) - (tracingCloudsTop.x > 0.0 ? tracingCloudsTop.x : max(0.0, tracingCloudsTop.y)));
-
-            vec3 cloudsPosition = rayPosition + worldLightVector * (tracingCloudsBottom.x > 0.0 ? tracingCloudsBottom.x : tracingCloudsBottom.y);
-
-            float density = GetCloudsMap(cloudsPosition);
-                  density = GetCloudsMapDetail(cloudsPosition, density, 0.2);
-                  density = CalculateCloudsCoverage(length(cloudsPosition - vec3(origin.x, 0.0, origin.z) - planet_radius), density);
-
-            S *= exp(-opticalDepth * density * clouds_scattering);
-*/
             asScattering += (S - S * transmittance) * asTransmittance / (tau);
             asTransmittance *= transmittance;
 
