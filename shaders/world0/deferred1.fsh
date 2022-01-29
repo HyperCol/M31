@@ -284,6 +284,9 @@ void main() {
 
         color = vec3(0.0);
 
+        float ndotl = dot(worldSunVector, rayDirection);
+        color += step(tracingPlanet.x, 0.0) * step(0.9995, ndotl) * mix(1.0 / 21.0, 1.0, saturate(rescale(ndotl, 0.9995, 1.0))) * HG(0.95, 0.76) * Sun_Light_Luminance * 10.0;
+
         DrawStars(color, v0.worldViewDirection, starsFade, tracingPlanet.x);
         DrawMoon(color, worldMoonVector, v0.worldViewDirection, tracingPlanet.x);
         CalculatePlanetSurface(color, SunLightingColor, MoonLightingColor, worldSunVector, v0.worldViewDirection, 1000.0, tracingPlanet.x - max(0.0, tracingAtmosphere.x));
