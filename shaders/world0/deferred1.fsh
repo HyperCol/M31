@@ -285,7 +285,7 @@ void main() {
         color = vec3(0.0);
 
         float ndotl = dot(worldSunVector, rayDirection);
-        color += step(tracingPlanet.x, 0.0) * step(0.9995, ndotl) * mix(1.0 / 21.0, 1.0, saturate(rescale(ndotl, 0.9995, 1.0))) * HG(0.95, 0.76) * Sun_Light_Luminance * 10.0;
+        color += step(tracingPlanet.x, 0.0) * step(0.9995, ndotl) * mix(1.0 / 21.0, 1.0, saturate(rescale(ndotl, 0.9995, 1.0))) * HG(0.95, 0.76) * Sun_Light_Luminance * 8.0;
 
         DrawStars(color, v0.worldViewDirection, starsFade, tracingPlanet.x);
         DrawMoon(color, worldMoonVector, v0.worldViewDirection, tracingPlanet.x);

@@ -18,14 +18,6 @@ const bool colortex12Clear = false;
 #include "/libs/uniform.glsl"
 
 void main() {
-    vec3 scattering = vec3(0.0);
-    vec3 transmittance = vec3(0.0);
-    float alpha = 1.0;
-
-    //scattering = texture(colortex9, texcoord * 0.5).rgb;
-    //alpha = texture(colortex9, texcoord * 0.5).a;
-    //transmittance = texture(colortex10, texcoord * 0.5).rgb;
-
     float depth = texture(depthtex0, texcoord).x;
     float linearDepth = ExpToLinerDepth(depth);
     
@@ -57,7 +49,7 @@ void main() {
         alpha /= totalWeight;
     }
 */
-    
+
     vec3 closest = vec3(0.0, 0.0, 10000.0);
 
     for(float i = -2.0; i <= 2.0; i += 1.0) {
@@ -80,9 +72,16 @@ void main() {
 
     float cloudsDepth = texture(colortex8, halfCoord).x;
     float linearCloudsDepth = ExpToLinerDepth(cloudsDepth);
-    /*
-    scattering = vec3(0.0);
-    alpha = 0.0;
+    
+    #if Near_Atmosphere_Upscale_Quality < High
+    vec3 transmittance = texture(colortex10, closest.xy).rgb;
+    vec3 scattering = texture(colortex9, closest.xy).rgb;
+    float alpha = texture(colortex9, closest.xy).a;
+    #else
+    vec3 scattering = vec3(0.0);
+    float alpha = 0.0;
+
+    vec3 transmittance = texture(colortex10, closest.xy).rgb;
 
     float totalWeight = 0.0;
 
@@ -95,7 +94,7 @@ void main() {
             float diffcent = abs(ExpToLinerDepth(sampleDepth) - linearDepth);
 
             float weight = 1.0 - min(1.0, diffcent);
-            if(i == 0.0 && j == 0.0) weight = 8.0;
+            if(i == 0.0 && j == 0.0) weight = 6.0;
 
             scattering += texture(colortex9, coord).rgb * weight;
             alpha += texture(colortex9, coord).a * weight;
@@ -105,13 +104,7 @@ void main() {
 
     scattering /= totalWeight;
     alpha /= totalWeight;
-    */
-
-    transmittance = texture(colortex10, closest.xy).rgb;
-    scattering = texture(colortex9, closest.xy).rgb;
-    alpha = texture(colortex9, closest.xy).a;
-
-    //if(closest.z > 10.0) scattering = vec3(1.0, 0.0, 0.0)
+    #endif
 
     vec2 velocity = GetVelocity(vec3(texcoord, cloudsDepth));
     //if(m.maskHand > 0.5) velocity *= 0.001;

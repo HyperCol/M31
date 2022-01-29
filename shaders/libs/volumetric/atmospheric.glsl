@@ -9,12 +9,19 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
 
     const float invsteps = 1.0 / float(steps);
 
-    vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0, -1.0, 0.0), planet_radius);
+    float planetShadow = 1.0;
+
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
-
-    if(tracingPlanet.x > 0.0 && tracingPlanet.y > 0.0) return vec3(0.0);
-
     if(tracingAtmosphere.y < 0.0) return vec3(1.0);
+
+    vec2 tracingPlanet = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0, -1.0, 0.0), planet_radius);
+
+    #ifdef Far_Atmosphere_Planet_Shadow
+    planetShadow = tracingPlanet.x > 0.0 ? exp(-(tracingPlanet.y - tracingPlanet.x) * 0.00001) : 1.0;
+    if(planetShadow < 1e-5) return vec3(0.0);
+    #else
+    if(tracingPlanet.x > 0.0 && tracingPlanet.y > 0.0) return vec3(0.0);
+    #endif
 
     float stepLength = tracingAtmosphere.y * invsteps;
 
@@ -34,7 +41,7 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
     vec3 tau = (rayleigh_scattering + rayleigh_absorption) * opticalDepth.x + (mie_scattering + mie_absorption) * opticalDepth.y + (ozone_absorption + ozone_scattering) * opticalDepth.z;
     vec3 transmittance = exp(-tau);
 
-    return transmittance;
+    return transmittance * planetShadow;
 }
 
 void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_color, in vec3 rayOrigin, in vec3 rayDirection, in vec3 L, in vec2 tracing) {

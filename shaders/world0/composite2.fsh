@@ -996,122 +996,13 @@ void main() {
     float formVirtualBlock = tracing.y + v0.viewLength;
     float backDepth = m.fullBlock > 0.9 ? formVirtualBlock : formBackFaceDepth;
     */
-    #if 0
-    
-    vec3 closest = vec3(0.0, 0.0, 2000.0);
-    
-    vec2 halfCoord = texcoord * 0.5;
-
-    for(float i = -2.0; i <= 2.0; i += 1.0) {
-        for(float j = -2.0; j <= 2.0; j += 1.0) {
-            vec2 offset = vec2(i, j);
-            vec2 sampleCoord = min(halfCoord + offset * texelSize, vec2(0.5) - texelSize);
-
-            float sampleDepth = ExpToLinerDepth(texture(colortex8, sampleCoord).x);
-
-            float diffcent = abs(v0.linearDepth - sampleDepth);
-
-            if(diffcent < closest.z) {
-                closest = vec3(offset, diffcent);
-            }
-        }
-    }  
-    
-    vec2 closestCoord = min(vec2(0.5) - texelSize, texcoord * 0.5 + closest.xy * texelSize);
-
-    vec3 transmittance = texture(colortex10, closestCoord).rgb;
-    vec3 scattering = texture(colortex9, closestCoord).rgb;
-    /*
-    float totalWeight = 0.0;
-    vec3 transmittance = vec3(0.0);
-    vec3 scattering = vec3(0.0);
-
-    for(float i = -2.0; i <= 2.0; i += 1.0) {
-        for(float j = -2.0; j <= 2.0; j += 1.0) {
-            vec2 offset = vec2(i, j);
-            vec2 sampleCoord = min(texcoord * 0.5 + offset * texelSize, vec2(0.5) - texelSize);
-
-            float sampleDepth = ExpToLinerDepth(texture(colortex8, sampleCoord).x);
-
-            float weight = 1.0;//1.0 - min(1.0, abs(sampleDepth - v0.linearDepth) * 1.0);
-
-            vec3 sampleScattering = texture(colortex9, sampleCoord).rgb;
-            vec3 sampleTransmittance = texture(colortex10, sampleCoord).rgb;
-
-            transmittance += sampleTransmittance * weight;
-            scattering += sampleScattering * weight;
-            totalWeight += weight;
-        }
-    }
-
-    if(totalWeight > 0) {
-    scattering /= totalWeight;
-    transmittance /= totalWeight;
-    }
-    */
-
-    //scattering = vec3(0.0);
-
-    //if(m.material > 64.5 && (m.maskWater > 0.5 || m.fullBlock > 0.5)) {
-    //    CalculateSubSurfaceScattering(color, scattering, m, t, v0, blockCenter, backDepth);
-    //}
-    
-    //vec2 velocity = GetVelocity(vec3(texcoord, v0.depth));
-    //if(m.maskHand > 0.5) velocity *= 0.001;
-    //vec2 previousCoord = texcoord - velocity;
-
-    //float depthWeight = (abs(ExpToLinerDepth(texture(colortex11, previousCoord).a) - v0.linearDepth) - 0.01) * 1000.0;
-    //float velocityWeight = length(velocity * resolution) * 0.1;
-
-    //float blend = 0.95 * step(abs(previousCoord.x - 0.5), 0.5) * step(abs(previousCoord.y - 0.5), 0.5);
-          //blend *= 1.0 - clamp((abs(ExpToLinerDepth(texture(colortex11, previousCoord).a) - v0.linearDepth) - 0.01) * 2048.0, 0.0, 1.0);
-          //blend *= 1.0 - min(1.0, max(velocityWeight, depthWeight));
-
-    //scattering = mix(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), blend);
-    //scattering = mix(scattering, texture(colortex11, previousCoord).rgb, blend);
-
-    if(m.maskWeather < 0.5) {
-        color *= transmittance;
-        color += scattering;
-    }
-
-    //if(totalWeight <= 1.0) color = vec3(1.0, 0.0, 0.0);
-    #endif
-
-    #if 1
-    vec3 transmittance = texture(colortex10, texcoord).rgb * texture(colortex9, texcoord).a;
-    vec3 scattering = texture(colortex9, texcoord).rgb;
-    #else
-    vec3 transmittance = vec3(0.0);//texture(colortex10, texcoord).rgb;
-    vec3 scattering = vec3(0.0);//texture(colortex9, texcoord).rgb;
-    float totalWeight = 0.0;
-
-    float centerDepth = v0.linearDepth;//ExpToLinerDepth(texture(colortex8, texcoord).x);
-
-    for(float i = -1.0; i <= 1.0; i += 1.0) {
-        for(float j = -1.0; j <= 1.0; j += 1.0) {
-            vec2 offset = vec2(i, j) * texelSize;
-            vec2 coord = texcoord + offset;
-
-            float weight = 1.0 - min(1.0, abs(centerDepth - ExpToLinerDepth(texture(depthtex0, coord).x)));
-            if(i == 0.0 && j == 0.0) weight = 1.0;
-
-            scattering += texture(colortex9, coord).rgb * weight;
-            transmittance += texture(colortex10, coord).rgb * weight;
-            totalWeight += weight;
-        }
-    }    
-
-    scattering /= totalWeight;
-    transmittance /= totalWeight;
-    #endif
 
     if(m.maskWeather < 0.5 && m.maskHand < 0.5) {
+        vec3 transmittance = texture(colortex10, texcoord).rgb * texture(colortex9, texcoord).a;
+        vec3 scattering = texture(colortex9, texcoord).rgb;
+
         color *= transmittance;
         color += scattering;
-
-        //if(scattering.x < 1e-5) color = vec3(1.0, 0.0, 0.0);
-        //else if(scattering.x > 2.0) color = vec3(1.0, 0.0, 1.0);
     }
 
     //color *= texture(colortex10, texcoord * 0.5).rgb;
