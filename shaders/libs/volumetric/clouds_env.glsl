@@ -1,5 +1,5 @@
 vec3 CloudsShadow(in vec3 worldPosition, in vec3 L, in vec3 origin, in vec2 TracingClamp, in float transmittance, in int quality) {
-    vec2 tracingClouds = TracingCloudsLayer(worldPosition * Altitude_Scale + vec3(0.0, origin.y, 0.0), L);
+    vec2 tracingClouds = TracingCloudsLayer(worldPosition + vec3(0.0, origin.y, 0.0), L);
 
     float rayStart = tracingClouds.x;
     float rayEnd = tracingClouds.y;
@@ -7,20 +7,20 @@ vec3 CloudsShadow(in vec3 worldPosition, in vec3 L, in vec3 origin, in vec2 Trac
 
     rayStart += stepLength * TracingClamp.x;
 
-    vec3 rayPosition = worldPosition * Altitude_Scale + origin + rayStart * L;
+    vec3 rayPosition = worldPosition + origin + rayStart * L;
 
-    vec3 opticalDepth = CalculateCloudsMedia(rayPosition, origin).rgb * stepLength * 0.25;
+    vec3 opticalDepth = CalculateCloudsMediaNoDetail(rayPosition, origin).rgb * stepLength * 0.25;
 
     vec3 extinction = CloudsLocalLighting(opticalDepth * transmittance);
 
-    return extinction;
+    return vec3(opticalDepth.r > 0.0 ? 0.0 : 1.0);
 }
 
 vec3 CloudsShadowRayMarching(in vec3 worldPosition, in vec3 L, in vec3 origin, in vec2 TracingClamp, in float transmittance, in int quality) {
     int steps = quality < Ultra ? 4 : 6;
     float invsteps = 1.0 / float(steps);
 
-    vec2 tracingClouds = TracingCloudsLayer(worldPosition * Altitude_Scale + vec3(0.0, origin.y, 0.0), L);
+    vec2 tracingClouds = TracingCloudsLayer(worldPosition + vec3(0.0, origin.y, 0.0), L);
 
     float rayStart = tracingClouds.x;
     float rayEnd = tracingClouds.y;
@@ -29,7 +29,7 @@ vec3 CloudsShadowRayMarching(in vec3 worldPosition, in vec3 L, in vec3 origin, i
     rayStart += stepLength * TracingClamp.x;
     vec3 rayStep = stepLength * (1.0 - TracingClamp.x) * TracingClamp.y * L;
 
-    vec3 rayPosition = worldPosition * Altitude_Scale + origin + rayStart * L;
+    vec3 rayPosition = worldPosition + origin + rayStart * L;
 
     stepLength *= invsteps;
 

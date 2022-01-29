@@ -10,10 +10,13 @@ const int colortex5Format = RGB32F;
 const int colortex6Format = RGBA16;
 const int colortex7Format = RGBA16;
 
-const int colortex8Format = R32F;
-const int colortex9Format = RGB16;
+const int colortex8Format = RG32F;
+
+const int colortex9Format = RGBA16;
 const int colortex10Format = RGB16;
-const int colortex11Format = RGBA32F;
+const int colortex11Format = RGBA16;
+const int colortex12Format = RG32F;
+
 
 const bool colortex5Clear = false;
 const bool colortex6Clear = false;
@@ -112,19 +115,18 @@ void main() {
 		 color *= MappingToHDR;
 	
 	#if TAA_Post_Processing_Sharpeness > 0 && defined(Enabled_TAA)
-	vec3 sharpen = vec3(0.0);
+		vec3 sharpen = vec3(0.0);
 
-	for(float i = -1.0; i <= 1.0; i += 1.0) {
-        for(float j = -1.0; j <= 1.0; j += 1.0) {
-			if(i == 0.0 && j == 0.0) continue;
-			sharpen += LinearToGamma(texture(composite, texcoord + vec2(i, j) * texelSize).rgb) * MappingToHDR;
+		for(float i = -1.0; i <= 1.0; i += 1.0) {
+			for(float j = -1.0; j <= 1.0; j += 1.0) {
+				if(i == 0.0 && j == 0.0) continue;
+				sharpen += LinearToGamma(texture(composite, texcoord + vec2(i, j) * texelSize).rgb) * MappingToHDR;
+			}
 		}
-	}
 
-	sharpen = clamp(color - sharpen / 8.0, vec3(-TAA_Post_Processing_Sharpen_Limit), vec3(TAA_Post_Processing_Sharpen_Limit));
-	//if(maxComponent(abs(sharpen)) > 0.05) color = vec3(1.0, 0.0, 0.0);
+		sharpen = color - sharpen / 8.0;
 
-	color = max(vec3(0.0), color + sharpen * 0.0625 * (TAA_Post_Processing_Sharpeness / 50.0));
+		color = saturate(color + sharpen * 0.5 * TAA_Post_Processing_Sharpeness * 0.01);
 	#endif
 
 	vec4 bloom = vec4(0.0);

@@ -194,9 +194,9 @@ void main() {
 
     #if Clouds_Shadow_Quality > OFF
         #if Clouds_Shadow_Quality < High
-        shading *= CloudsShadow(v0.wP, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
+        shading *= CloudsShadow(v0.wP * Altitude_Scale, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
         #else
-        shading *= CloudsShadowRayMarching(v0.wP, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
+        shading *= CloudsShadowRayMarching(v0.wP * Altitude_Scale, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
         #endif
     #endif
 

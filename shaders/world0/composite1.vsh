@@ -1,2 +1,9 @@
 #version 130
-#include "/program/composite.vsh"
+
+out vec2 texcoord;
+
+void main() {
+    gl_Position = ftransform();
+
+    texcoord = gl_MultiTexCoord0.xy;
+}

@@ -1,38 +1,39 @@
 const float     clouds_height       = 1500.0;
 const float     clouds_thickness    = 800.0;
 
-const vec3      clouds_scattering   = vec3(0.05);
+const vec3      clouds_scattering   = vec3(0.08);
 
 vec2 TracingCloudsLayer(in vec3 origin, in vec3 direction) {
     vec2 tracingBottom = RaySphereIntersection(origin, direction, vec3(0.0), planet_radius + clouds_height);
     vec2 tracingTop = RaySphereIntersection(origin, direction, vec3(0.0), planet_radius + clouds_height + clouds_thickness);
+    
+    float start = tracingBottom.x > 0.0 ? tracingBottom.x : max(0.0, tracingBottom.y);
+    float end = tracingTop.x > 0.0 ? tracingTop.x : max(0.0, tracingTop.y);
 
-    float rayStart = max(0.0, tracingBottom.y);
-    float rayEnd = max(0.0, tracingTop.y);
-
-    if(rayStart > rayEnd) {
-        float v = rayStart;
-        rayStart = rayEnd;
-        rayEnd = v;
+    if(start > end) {
+        float v = start;
+        start = end;
+        end = v;
     }
 
-    return vec2(rayStart, rayEnd);
+    return vec2(start, end);
 }
 
-float GetCloudsMap(in vec3 position, in float linearHeight) {
+float GetCloudsMap(in vec3 position, in float height) {
     vec3 worldPosition = vec3(position.x, position.z, position.y - planet_radius);
 
     float t = (frameTimeCounter) * Clouds_Speed;
 
     worldPosition.x += t * Clouds_X_Speed;
-    worldPosition.x += linearHeight / (clouds_thickness) * Clouds_X_Speed;
+    worldPosition.x += height / 100.0 * Clouds_X_Speed;
     worldPosition.z += t * Clouds_Vertical_Speed;
 
     vec3 shapeCoord = worldPosition * 0.0005;
     float shape = (noise(shapeCoord.xy) + noise(shapeCoord.xy * 2.0) * 0.5) / 1.5;
-    float shape2 = (noise(shapeCoord * 4.0) + noise(shapeCoord.xy * 8.0) * 0.5) / 1.5;
 
-    float density = max(0.0, rescale((shape + shape2 * 0.5) / 1.5, 0.0, 1.0));
+    float shape2 = (noise(shapeCoord * 4.0) + noise(shapeCoord * 8.0) * 0.5) / 1.5;
+
+    float density = max(0.0, rescale(mix(shape2, shape, 0.7), 0.1, 1.0));
 
     return density;
 }
@@ -50,13 +51,13 @@ float GetCloudsMapDetail(in vec3 position, in float shape, in float distortion) 
 } 
 
 float GetCloudsCoverage(in float linearHeight) { 
-    return pow(0.8, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.5)) * saturate(rescale(linearHeight, -0.05, 0.1)) * saturate(remap(linearHeight, 0.95, 1.0, 1.0, 0.0)));
+    return pow(0.7, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.3)) * saturate(rescale(linearHeight, -0.01, 0.01)));
 }
 
 float CalculateCloudsCoverage(in float height, in float clouds) {
-    float linearHeight = (height - clouds_height) / clouds_thickness;    
+    float linearHeight = (height) / clouds_thickness;
 
-    return saturate(rescale(clouds, GetCloudsCoverage(linearHeight), 1.0) * 2.0);
+    return saturate(rescale(clouds, GetCloudsCoverage(linearHeight), 1.0));
 }
 
 vec3 CloudsPowderEffect(in vec3 opticalDepth) {
@@ -70,10 +71,22 @@ vec3 CloudsLocalLighting(in vec3 opticalDepth) {
 }
 
 vec4 CalculateCloudsMedia(in vec3 rayPosition, in vec3 origin) {
-    float height = length(rayPosition - vec3(origin.x, 0.0, origin.z)) - planet_radius;
+    float worldHeight = length(rayPosition - vec3(origin.x, 0.0, origin.z)) - planet_radius;
+    float height = worldHeight - clouds_height;
 
     float density = GetCloudsMap(rayPosition, height);
           density = GetCloudsMapDetail(rayPosition, density, 0.2);
+          density = CalculateCloudsCoverage(height, density);
+
+    return vec4(clouds_scattering * density, density);
+}
+
+vec4 CalculateCloudsMediaNoDetail(in vec3 rayPosition, in vec3 origin) {
+    float worldHeight = length(rayPosition - vec3(origin.x, 0.0, origin.z)) - planet_radius;
+    float height = worldHeight - clouds_height;
+
+    float density = GetCloudsMap(rayPosition, height);
+          //density = GetCloudsMapDetail(rayPosition, density, 0.2);
           density = CalculateCloudsCoverage(height, density);
 
     return vec4(clouds_scattering * density, density);

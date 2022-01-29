@@ -169,7 +169,7 @@ void main() {
     float blend = 0.98 * InScreen;
 
     vec3 v = YCoCgToRGB(variance);
-    blend -= step(0.05, velocityLength) * 0.05;// * saturate(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.5, 1.0));
+    blend -= step(0.05, velocityLength) * 0.08;// * saturate(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.5, 1.0));
 
     vec3 accumulation = clipToAABB(previousColor, minColor, maxColor);
          accumulation = mix(currentColor, accumulation, vec3(blend));
