@@ -40,6 +40,7 @@ vec4 ImportanceSampleGGX(in vec2 E, in float roughness){
 vec3 DiffuseLighting(in Gbuffers m, in vec3 L, in vec3 E) {
     float ndotv = max(0.0, dot(m.texturedNormal, E));
     float ndotl = max(0.0, dot(m.texturedNormal, L));
+    float gndotl = max(0.0, dot(m.geometryNormal, L));
 
     if(ndotl == 0.0) return vec3(0.0);
 
@@ -54,7 +55,7 @@ vec3 DiffuseLighting(in Gbuffers m, in vec3 L, in vec3 E) {
     float FDV = 1.0 + (FD90 - 1.0) * SchlickFresnel(ndotv);
     float FDL = 1.0 + (FD90 - 1.0) * SchlickFresnel(ndotl);
 
-    vec3 diffuse = (m.albedo.rgb * kD) * (invPi * FDL * FDV * ndotl * (1.0 - m.metallic) * (1.0 - m.metal));
+    vec3 diffuse = m.albedo.rgb * kD * FDL * FDV * ndotl * saturate(rescale(gndotl, 0.05, 0.1)) * invPi * (1.0 - m.metallic) * (1.0 - m.metal);
 
     return diffuse;
 }
