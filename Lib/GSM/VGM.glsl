@@ -1,1 +1,0 @@
-#Standard vector shader generic module
