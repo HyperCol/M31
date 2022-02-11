@@ -1,11 +1,15 @@
-# Virgo
+![Virgo.png](image/Readme/Virgo.png)
 
-开发中
+一款Minecraft着色器，正在开发
 
-## 开发者
+# 目标
 
-140
+比较完整的效果
 
-## 版权
+自洽的渲染体系
 
-@HyperCol/VacGrd
+# 版权
+
+Apache License
+
+Copyright © 2019-present HyperCol Studios
