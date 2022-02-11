@@ -1,4 +1,4 @@
-#if Atmosphere_Profile == Earth_Alike
+#if Atmosphere_Profile == Default
     const vec3  rayleigh_scattering         = vec3(5.8, 13.5, 33.1) * 1e-6;
     const vec3  rayleigh_absorption         = vec3(0.0);
     const float rayleigh_distribution       = 8000.0;
@@ -28,6 +28,47 @@
     const float atmosphere_radius           = Atmosphere_Radius;
 #endif
 
+    #define Linear_Fog 0
+    #define Exponential_Fog 1
+
+    #define Fog_Distribution_Term Exponential_Fog
+    #define Fog_Exponential_Fog_Vaule 16.0
+    #define Fog_Exponential_Fog_Bottom 2.0
+    #define Fog_Linear_Fog_Vaule 48.0
+    #define Fog_Linear_Fog_Bottom -8.0
+    #define Fog_Reduce_Density_Far 0.005    //[0.0 0.001 0.0025 0.005 0.0075 0.01]
+
+    #define Rain_Fog_Distribution_Term Exponential_Fog
+    #define Rain_Fog_Exponential_Fog_Vaule 1000.0
+    #define Rain_Fog_Exponential_Fog_Bottom 2.0
+    #define Rain_Fog_Linear_Fog_Vaule 2000.0
+    #define Rain_Fog_Linear_Fog_Bottom -8.0
+    #define Rain_Fog_Reduce_Density_Far 0.0    //[0.0 0.001 0.0025 0.005 0.0075 0.01]
+
+    const vec3 fog_scattering = vec3(0.001);
+    const vec3 fog_absorption = vec3(0.0);
+
+    #define Reduce_Fog_Indoor_Density
+    #define Reduce_Fog_Bottom_Density
+    #define Reduce_Far_Fog_Density
+
+    #define Weather_Fog_Thickness 2000.0
+    #define Fog_Thickness 48.0
+
+    #define Fog_Density 1.0
+    #define Rain_Fog_Density 2.0
+    #define Snow_Fog_Density 4.0
+
+    //#define Fog_Start_Height Default              //[Default Custom]
+    //#define Fog_Start_Height_Vaule 58.0
+    //#define Fog_Thickness 32.0
+    //#define Fog_Linear_Low_Density_Top 0.5
+    //#define Fog_Linear_Low_Density_Bottom 0.1
+
+    //const float fog_thickness = Fog_Thickness * Fog_Linear_Low_Density_Top;
+    //const float fog_distribution = Fog_Thickness * (1.0 - Fog_Linear_Low_Density_Top);
+    //const float fog_distribution_bottom = Fog_Thickness * Fog_Linear_Low_Density_Bottom;
+
 #define Fog_Scattering_R 0.0005
 #define Fog_Scattering_G 0.0005
 #define Fog_Scattering_B 0.0005
@@ -46,7 +87,7 @@
 #define Fog_Front_Scattering 0.8
 #define Fog_Scattering_Density 2.0
 #define Fog_Absorption_Density 2.0
-#define Fog_Height 64.0
+//#define Fog_Height 64.0
 #define Fog_Distribution 16.0
 
 #define RainFog_Eccentricity -0.1
@@ -89,7 +130,7 @@ struct AtmosphericData {
 AtmosphericData GetAtmosphericDate(in float fog, in float haze) {
     AtmosphericData atmospheric;
 
-    atmospheric.fogHeight = mix(Fog_Height, RainFog_Height, rainStrength);
+    atmospheric.fogHeight = 63.0;//mix(Fog_Height, RainFog_Height, rainStrength);
     atmospheric.fogDistribution = Fog_Distribution;
 
     atmospheric.fogScattering = vec3(Fog_Scattering_R, Fog_Scattering_G, Fog_Scattering_B) * max(fog * Fog_Scattering_Density, rainStrength * RainFog_Scattering_Density);
@@ -108,7 +149,7 @@ AtmosphericData GetAtmosphericDate(in float fog, in float haze) {
 vec3 CalculateFogLight(in float depth, in vec3 t) {
     vec3 opticalDepth = depth * t;
 
-    return (exp(-opticalDepth) + exp(-opticalDepth * 0.01) * 0.5) / 1.5;
+    return (exp(-opticalDepth) + exp(-opticalDepth * 0.25) * 0.7) / 1.7;
 }
 
 float CalculateFogPhaseFunction(in float theta, in AtmosphericData atmospheric) {

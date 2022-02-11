@@ -177,7 +177,6 @@ void main() {
     vec3 origin = vec3(cameraPosition.x, cameraPosition.y - 63.0, cameraPosition.z) * Altitude_Scale;
          origin.y = planet_radius + origin.y;
 
-
     float simplesss = m.fullBlock < 0.5 && m.material > 65.0 ? 1.0 : 0.0;
 
     vec3 shading = CalculateShading(vec3(texcoord, v0.depth), lightVector, m.geometryNormal, simplesss * 2.0);
@@ -189,8 +188,14 @@ void main() {
         sunLight += LeavesShading(lightVector, v0.eyeDirection, m.texturedNormal, m.albedo.rgb, m.transmittance, m.scattering);
     }
 
-    float tracingFogSun = max(0.0, IntersectPlane(vec3(0.0, v0.wP.y + cameraPosition.y - 63.0, 0.0), worldLightVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
-    vec3 sunLightExtinction = min(vec3(1.0), CalculateFogLight(tracingFogSun, atmospheric.fogTransmittance) * CalculateFogPhaseFunction(1.0 - 1e-5, atmospheric) / HG(0.9, 0.76));
+    float height = max(0.05, v0.wP.y + cameraPosition.y - 63.0);
+    vec3 Tfog = fog_scattering * exp(-mix(height, 2000.0, 0.5) / mix(Fog_Exponential_Fog_Vaule, Rain_Fog_Exponential_Fog_Vaule, rainStrength));
+
+    float tracingFogSun = max(0.0, IntersectPlane(vec3(0.0, height, 0.0), worldLightVector, vec3(0.0, 2000.0, 0.0), vec3(0.0, 1.0, 0.0)));
+    vec3 sunLightExtinction = CalculateFogLight(tracingFogSun, Tfog);
+
+    float tracingFogUp = max(0.0, IntersectPlane(vec3(0.0, height, 0.0), worldUpVector, vec3(0.0, 2000.0, 0.0), vec3(0.0, 1.0, 0.0)));
+    vec3 skyLightExtinction = CalculateFogLight(tracingFogUp, Tfog);
 
     #if Clouds_Shadow_Quality > OFF
         #if Clouds_Shadow_Quality < High
@@ -202,16 +207,13 @@ void main() {
 
     color += sunLight * LightingColor * shading * shadowFade * sunLightExtinction;
 
-    float tracingFogUp = max(0.0, IntersectPlane(vec3(0.0, v0.wP.y + cameraPosition.y - 63.0, 0.0), worldUpVector, vec3(0.0, atmospheric.fogHeight, 0.0), vec3(0.0, 1.0, 0.0)));
-    vec3 skyLightExtinction = CalculateFogLight(tracingFogUp, atmospheric.fogTransmittance);
-
     float ao = ScreenSpaceAmbientOcclusion(m, v0);
 
     float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0));
     float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 8.0, 1.0));
 
     vec3 AmbientLightColor = SkyLightingColor;
-         AmbientLightColor += LightingColor * atmospheric.fogScattering * (tracingFogUp * 0.5) * CalculateFogPhaseFunction(worldLightVector.y, atmospheric);
+         //AmbientLightColor += LightingColor * atmospheric.fogScattering * (tracingFogUp * 0.5) * CalculateFogPhaseFunction(worldLightVector.y, atmospheric);
 
     vec3 AmbientLight = vec3(0.0);
          AmbientLight += m.albedo * LightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);

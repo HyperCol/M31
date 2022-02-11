@@ -51,7 +51,7 @@ float GetCloudsMapDetail(in vec3 position, in float shape, in float distortion) 
 } 
 
 float GetCloudsCoverage(in float linearHeight) { 
-    return pow(0.7, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.3)) * saturate(rescale(linearHeight, -0.01, 0.01)));
+    return pow(0.7 - 0.4 * rainStrength, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.3)) * saturate(rescale(linearHeight, -0.01, 0.01)));
 }
 
 float CalculateCloudsCoverage(in float height, in float clouds) {

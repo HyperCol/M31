@@ -17,6 +17,9 @@
 #define Moon 2
 #define Both 3
 
+#define Default 0
+#define Custom 1
+
 //Lighting Setting
 #define Sun_Light_Luminance 6.0
 #define Moon_Light_Luminance 0.1
@@ -105,9 +108,7 @@
 #define Planet_Radius 6360000.0                     //[]
 #define Atmosphere_Radius 6420000.0                 //[]
 
-#define Custom -1
-#define Earth_Alike 0
-#define Atmosphere_Profile Earth_Like               //[Custom Earth_Like]
+#define Atmosphere_Profile Earth_Like               //[Default Custom]
 
 #define Rayleigh_Scattering 1.0                     //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 #define Rayleigh_Absorption 0.0                     //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]

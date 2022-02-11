@@ -168,8 +168,8 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
     
     float rayLength = v.viewLength * Altitude_Scale;
 
-    float dither = R2Dither(ApplyTAAJitter(texcoord - jitter * 0.5) * resolution * 0.5);
-    float dither2 = R2Dither(ApplyTAAJitter(1.0 - texcoord - jitter * 0.5) * resolution * 0.5);
+    float dither = R2Dither(ApplyTAAJitter(texcoord - jitter) * resolution * 0.5);
+    float dither2 = R2Dither(ApplyTAAJitter(1.0 - texcoord - jitter) * resolution * 0.5);
 
     //vec2 tracingBarrel = IntersectNearClouds(vec3(0.0, origin.y, 0.0), direction, vec3(0.0, planet_radius + clouds_height, 0.0), vec3(0.0, planet_radius + clouds_height + clouds_thickness, 0.0), 8000.0);
     //float barrel = tracingBarrel.x > 0.0 ? tracingBarrel.x : max(0.0, tracingBarrel.y);
@@ -260,7 +260,7 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
             vec3 extinction = exp(-mediaSample.rgb * abs(stepLength));
 
             #if Clouds_Tracing_Light_Source == Both
-            vec3 S = SunLight * CalculateCloudsLightExtinction(currentPosition, worldSunVector, origin, dither2, Clouds_Sun_Lighting_Tracing) + MoonLight * CalculateCloudsLightExtinction(rayPosition, -worldSunVector, origin, dither2, Clouds_Moon_Lighting_Tracing);        
+            vec3 S = SunLight * CalculateCloudsLightExtinction(currentPosition, worldSunVector, origin, dither2, Clouds_Sun_Lighting_Tracing) + MoonLight * CalculateCloudsLightExtinction(currentPosition, -worldSunVector, origin, dither2, Clouds_Moon_Lighting_Tracing);
             #elif Clouds_Tracing_Light_Source == Sun
             vec3 S = SunLight * CalculateCloudsLightExtinction(currentPosition, worldSunVector, origin, dither2, High);
             #elif Clouds_Tracing_Light_Source == Moon
@@ -302,6 +302,11 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
 
         //if(tracingPlanet.x > 0.0) cloudsLength = max(cloudsLength, tracingPlanet.x);
     }
+
+    //if(isSky){
+    //    cloudsLength = depthStart + Sky_Distance_Above_Clouds;
+    //    if(tracingPlanet.x > 0.0) cloudsLength = tracingPlanet.x;
+    //}
 }
 
 void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmittance, in Vector v, in AtmosphericData atmospheric, in float tracingEnd, bool hitSphere) {
@@ -327,6 +332,9 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
     float phaseMieMoon = HG(-theta, 0.76);
     vec3 mieMoonLight = vec3(moonLuminance * phaseMieMoon);
 
+    float fogSunLight = lightHG * Sun_Light_Luminance * mix(HG(theta, -0.1), HG(theta, 0.7), 0.2);
+    float fogAmbientLight = (sunLuminance + moonLuminance) * HG(abs(worldSunVector.y), 0.76);
+
     float phaseRayleigh2 = (3.0 / 16.0 / Pi) * (1.0 + worldSunVector.y * worldSunVector.y);
     vec3 rayleighSunLight2 = vec3(sunLuminance * phaseRayleigh2);
     vec3 rayleighMoonLight2 = vec3(moonLuminance * phaseRayleigh2);
@@ -348,7 +356,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
 
     float stepLength = (end - start) * invsteps;
 
-    float dither = R2Dither(ApplyTAAJitter(texcoord) * resolution + vec2(frameTimeCounter * 45.0, 0.0));
+    float dither = R2Dither((ApplyTAAJitter(texcoord) - jitter) * resolution * 0.5);
 
     vec3 scattering = vec3(0.0);
     vec3 transmittance = vec3(1.0);
@@ -359,24 +367,27 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
 
     for(int i = 0; i < steps; i++) {
         vec3 currentPosition = testPoint;
+        float rayLength = length(currentPosition - rayStart);
 
-        //if(length(currentPosition - rayStart) > rayEnd) break;
+        //if(rayLength > rayEnd) break;
 
         float height = hitSphere ? length(currentPosition + vec3(0.0, planet_radius, 0.0)) - planet_radius : currentPosition.y;
-              height = max(1e-5, height);
+        float noclampedHeight = height;
+              height = max(0.05, height);
 
         vec3 shadowCoord = WorldPositionToShadowCoord(currentPosition - rayStart);
         float visibility = abs(shadowCoord.x - 0.5) >= 0.5 || abs(shadowCoord.y - 0.5) >= 0.5 || shadowCoord.z + 1e-5 > 1.0 ? 1.0 : step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x);
 
         vec3 cloudsShadow = vec3(1.0);
 
-        //cloudsShadow = CloudsShadow((currentPosition - rayStart), worldLightVector, origin + vec3(0.0, planet_radius, 0.0), vec2(0.05, 0.7), 1.0, High);
+        cloudsShadow = CloudsShadow((currentPosition - rayStart), worldLightVector, origin + vec3(0.0, planet_radius, 0.0), vec2(0.05, 0.7), 1.0, High);
 
         vec3 cloudsOccluasion = vec3(1.0);
         
-        //cloudsOccluasion = CloudsShadow(currentPosition - rayStart, worldUpVector, origin + vec3(0.0, planet_radius, 0.0), vec2(0.05, 1.0), 1.0, 1);
+        cloudsOccluasion = vec3(0.5);//CloudsShadow(currentPosition - rayStart, worldUpVector, origin + vec3(0.0, planet_radius, 0.0), vec2(0.05, 1.0), 0.5, High);
 
         vec3 lightVisibility = vec3(visibility) * cloudsShadow;
+        vec3 skylightVisibility = cloudsOccluasion;
 
         float Dm = exp(-height / mie_distribution) * 1.0;
         vec3 Tm = (mie_absorption + mie_scattering) * Dm;
@@ -384,7 +395,21 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
         float Dr = exp(-height / rayleigh_distribution) * 1.0;
         vec3 Tr = (rayleigh_absorption + rayleigh_scattering) * Dr;
 
-        vec3 extinction = Tm + Tr;
+        #if Fog_Distribution_Term == Linear_Fog
+        float Dfog = (1.0 - saturate(height / Fog_Linear_Fog_Vaule)) * saturate((noclampedHeight - Fog_Linear_Fog_Bottom) / abs(Fog_Linear_Fog_Bottom)) * exp(-rayLength * Fog_Reduce_Density_Far) * 100.0;
+        #else
+        float Dfog = exp(-height / Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Fog_Exponential_Fog_Bottom) * exp(-rayLength * Fog_Reduce_Density_Far);
+        #endif
+
+        #if Rain_Fog_Distribution_Term == Linear_Fog
+        float Dweather = (1.0 - saturate(height / Rain_Fog_Linear_Fog_Vaule)) * (saturate((noclampedHeight - Rain_Fog_Exponential_Fog_Bottom) / abs(Rain_Fog_Exponential_Fog_Bottom)));
+        #else
+        float Dweather = exp(-height / Rain_Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Rain_Fog_Exponential_Fog_Bottom);
+        #endif
+
+        vec3 Tfog = fog_scattering * mix(Dfog, Dweather, rainStrength);
+
+        vec3 extinction = Tm + Tr + Tfog;
 
         vec3 stepExtinction = exp(-stepLength * extinction);
 
@@ -401,6 +426,23 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
              moonLight *= moonLightExtinction;
 
         vec3 S = sunLight + moonLight;
+
+        vec3 samplePosition = rayStart + testPoint;
+
+        float tracingFogSun = max(0.0, IntersectPlane(samplePosition, worldLightVector, vec3(0.0, 2000.0, 0.0), vec3(0.0, 1.0, 0.0)));
+        float tracingFogUp = max(0.0, IntersectPlane(samplePosition, worldUpVector, vec3(0.0, 2000.0, 0.0), vec3(0.0, 1.0, 0.0)));
+
+        if(hitSphere) {
+            tracingFogSun = max(0.0, RaySphereIntersection(samplePosition + vec3(0.0, planet_radius, 0.0), worldLightVector, vec3(0.0), planet_radius + 2000.0).y);
+            tracingFogUp = max(0.0, RaySphereIntersection(samplePosition + vec3(0.0, planet_radius, 0.0), worldUpVector, vec3(0.0), planet_radius + 2000.0).y);
+        }
+
+        vec3 lightSampleTransmittance = fog_scattering * exp(-mix(height, 2000.0, 0.5) / mix(Fog_Exponential_Fog_Vaule, Rain_Fog_Exponential_Fog_Vaule, rainStrength));// * (1.0 - saturate(mix(height, 2000.0, 0.5) / Fog_Linear_Fog_Vaule));//
+
+        vec3 fogSunLighting = fogSunLight * lightVisibility * CalculateFogLight(tracingFogSun, lightSampleTransmittance);
+        vec3 fogambientLighting = fogAmbientLight * skylightVisibility * CalculateFogLight(tracingFogUp, lightSampleTransmittance);
+
+        S += Tfog * sunLightExtinction * (fogSunLighting + fogambientLighting);
 
         scattering += (S - S * stepExtinction) * stepExtinction / extinction;
         transmittance *= stepExtinction;
@@ -420,7 +462,7 @@ void main() {
 
     //opaque
     Vector v0 = GetVector(texcoord, m.maskWeather > 0.5 ? texture(colortex4, texcoord).x : texture(depthtex0, texcoord).x);
-    Vector v1 = GetVector(texcoord, texture(depthtex1, texcoord).x);
+    Vector v1 = GetVector(texcoord, m.tile_mask == Mask_ID_Particles ? texture(depthtex0, texcoord).x : texture(depthtex1, texcoord).x);
 
     AtmosphericData atmospheric = GetAtmosphericDate(timeFog, timeHaze);    
 

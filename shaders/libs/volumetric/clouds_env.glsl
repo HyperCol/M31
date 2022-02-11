@@ -13,7 +13,7 @@ vec3 CloudsShadow(in vec3 worldPosition, in vec3 L, in vec3 origin, in vec2 Trac
 
     vec3 extinction = CloudsLocalLighting(opticalDepth * transmittance);
 
-    return vec3(opticalDepth.r > 0.0 ? 0.0 : 1.0);
+    return extinction;
 }
 
 vec3 CloudsShadowRayMarching(in vec3 worldPosition, in vec3 L, in vec3 origin, in vec2 TracingClamp, in float transmittance, in int quality) {

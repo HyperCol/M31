@@ -118,7 +118,7 @@ void main() {
     //float weight = 1.0 - min(1.0, 0.01 * abs(ExpToLinerDepth(texture(colortex8, texcoord * 0.5 - velocity).y) - linearCloudsDepth));
     //float weight = 1.0 - abs(alpha - previousSample.a);//1.0 - min(1.0, 10000.0 * abs(ExpToLinerDepth(texture(depthtex0, previousCoord - velocity * 3.0).x) - linearDepth));
 
-    float weight = 1.0 - min(1.0, abs(ExpToLinerDepth(previousCloudsDepth) - linearCloudsDepth) / linearCloudsDepth * 2.0);
+    float weight = 1.0 - min(1.0, abs(ExpToLinerDepth(previousCloudsDepth) - linearCloudsDepth) / linearCloudsDepth * 1.0);
 
     float blend = 0.85 * InScreen * weight;
 

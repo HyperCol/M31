@@ -998,8 +998,10 @@ void main() {
     */
 
     if(m.maskWeather < 0.5 && m.maskHand < 0.5) {
-        vec3 transmittance = texture(colortex10, texcoord).rgb * texture(colortex9, texcoord).a;
-        vec3 scattering = texture(colortex9, texcoord).rgb;
+        vec2 coord = texcoord;
+
+        vec3 transmittance = texture(colortex10, coord).rgb * texture(colortex9, coord).a;
+        vec3 scattering = texture(colortex9, coord).rgb;
 
         color *= transmittance;
         color += scattering;
