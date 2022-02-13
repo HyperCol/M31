@@ -15,57 +15,32 @@ uniform vec3 moonPosition;
 uniform vec3 shadowLightPosition;
 #endif
 
-vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint, float sampleHeight) {
+vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint, in float density) {
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, L, vec3(0.0), atmosphere_radius);
-    //vec2 tracingPlanet = RaySphereIntersection(rayOrigin, L, vec3(0.0), planet_radius);
     if(tracingAtmosphere.y < 0.0) return vec3(1.0);
 
-    float stepLength = tracingAtmosphere.y * samplePoint;
+    vec2 tracingPlanet = RaySphereIntersection(rayOrigin, L, vec3(0.0), planet_radius);
+    float planetShadow = tracingPlanet.x > 0.0 ? exp(-(tracingPlanet.y - tracingPlanet.x) * 0.00001) : 1.0;
+    //if(tracingPlanet.x > 0.0) return vec3(0.0);
 
-    float h = length(rayOrigin + (tracingAtmosphere.y * sampleHeight) * L) - planet_radius;
+    float stepLength = tracingAtmosphere.y;
 
-    float density_rayleigh  = stepLength * exp(-h / rayleigh_distribution);
-    float density_mie       = stepLength * exp(-h / mie_distribution);
+    float height = length(rayOrigin + L * stepLength * 0.2) - planet_radius;
+
+    float density_rayleigh  = exp(-height / rayleigh_distribution) * density;
+    float density_mie       = exp(-height / mie_distribution) * density;
 
     vec3 tau = (rayleigh_scattering + rayleigh_absorption) * density_rayleigh + (mie_scattering + mie_absorption) * density_mie;
-    vec3 transmittance = exp(-tau);
+    vec3 transmittance = exp(-tau * stepLength);
 
-    return transmittance;
+    return transmittance * planetShadow;
 }
 
-vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
-    int steps = 6;
-    float invsteps = 1.0 / float(steps);
+vec3 SimpleInScattering(in vec3 samplePosition, in vec3 direction, in vec3 L, in float s, in float h) {
+    vec2 tracing = RaySphereIntersection(samplePosition, direction, vec3(0.0), atmosphere_radius);
 
-    vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, rayDirection, vec3(0.0), atmosphere_radius);
-    if(tracingAtmosphere.y < 0.0) return vec3(1.0);
-
-    float stepLength = tracingAtmosphere.y * invsteps;
-
-    vec3 opticalDepth = vec3(0.0);
-
-    for(int i = 0; i < steps; i++) {
-        vec3 p = rayOrigin + rayDirection * (stepLength + stepLength * float(i));
-        float h = max(1e-5, length(p) - planet_radius);
-
-        float density_rayleigh  = stepLength * exp(-h / rayleigh_distribution);
-        float density_mie       = stepLength * exp(-h / mie_distribution);
-        float density_ozone     = stepLength * max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
-
-        opticalDepth += vec3(density_rayleigh, density_mie, density_ozone);
-    }
-
-    vec3 tau = (rayleigh_scattering + rayleigh_absorption) * opticalDepth.x + (mie_scattering + mie_absorption) * opticalDepth.y + (ozone_absorption + ozone_scattering) * opticalDepth.z;
-    vec3 transmittance = exp(-tau);
-
-    return transmittance;
-}
-
-vec3 SimpleInScattering(in vec3 samplePosition, in vec3 direction, in float s, in float h) {
-    vec2 tracing = RaySphereIntersection(samplePosition, worldUpVector, vec3(0.0), atmosphere_radius);
-
-    float stepLength = tracing.y * s;
-    float height = length(samplePosition + direction * (stepLength * h)) - planet_radius;
+    float stepLength = tracing.y;
+    float height = length(samplePosition + direction * stepLength * 0.5) - planet_radius;
 
     float Hr = exp(-height / rayleigh_distribution);
     float Hm = exp(-height / mie_distribution);
@@ -75,7 +50,9 @@ vec3 SimpleInScattering(in vec3 samplePosition, in vec3 direction, in float s, i
 
     vec3 transmittance = exp(-(Tr + Tm) * stepLength);
 
-    return transmittance * stepLength * (rayleigh_scattering * Hr + mie_scattering * Hm);
+    vec3 lighting = (transmittance) * stepLength * (rayleigh_scattering + mie_scattering);
+
+    return lighting;
 }
 
 // Values from: http://blenderartists.org/forum/showthread.php?270332-OSL-Goodness&p=2268693&viewfull=1#post2268693   
@@ -111,14 +88,16 @@ void main() {
     //make sure samplePosition.y > planet_radius
     vec3 samplePosition = vec3(0.0, planet_radius + 1.0, 0.0);
 
-    float theta = dot(upVector, sunVector);
-    vec2 phaseMie = vec2(HG(theta, 0.76), HG(-theta, 0.76));
-    float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + theta * theta);
+    float theta     = mix(0.0, dot(upVector, sunVector), 0.5);
+    float phasem    = min(HG(theta, 0.76) * 3.0, 1.0);
+    float phasem2   = min(HG(-theta, 0.76) * 3.0, 1.0);
+    float phaser    = min((3.0 / 16.0 / Pi) * (1.0 + theta * theta) * 3.0, 1.0);
 
-    SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.5, 0.15) * Sun_Light_Luminance;
-    MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.5, 0.15) * Moon_Light_Luminance;
+    SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.2, 1.0) * Sun_Light_Luminance;
+    MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.2, 1.0) * Moon_Light_Luminance;
     LightingColor       = SunLightingColor + MoonLightingColor;
-    SkyLightingColor    = SimpleInScattering(samplePosition, worldUpVector, 0.5, 0.5) * (Nature_Light_Min_Luminance + mix(vec3(sum3(SunLightingColor) + sum3(MoonLightingColor)), SunLightingColor + MoonLightingColor, vec3(0.1)));
+    SkyLightingColor    = SimpleInScattering(samplePosition, worldUpVector, worldSunVector, 0.5, 0.5) * (sum3(SunLightingColor) * (rayleigh_scattering * phasem + mie_scattering * phaser)) / (rayleigh_scattering + mie_scattering);
+    //(Nature_Light_Min_Luminance + mix(vec3(sum3(SunLightingColor) + sum3(MoonLightingColor)), SunLightingColor + MoonLightingColor, vec3(0.1)));
 
     #if Blocks_Light_Color == Color_Temperature
     BlockLightingColor  = ColorTemperatureToRGB(Blocks_Light_Color_Temperture) * Blocks_Light_Intensity * Blocks_Light_Luminance;
@@ -132,6 +111,12 @@ void main() {
 
     float time = float(worldTime);
 
-    timeFog = max((1.0 - (clamp(time, -2000.0, 4000.0) - -2000.0) / 4000.0), (clamp(time, 14000.0, 18000.0) - 14000.0) / 4000.0 - (clamp(time, 22000.0, 28000.0) - 22000.0) / 6000.0);
-    timeHaze = (clamp(time, 8000.0, 11000.0) - 8000.0) / 3000.0 - (clamp(time, 11000.0, 13000) - 11000.0) / 2000.0;
+    float fogEnd = float(Fog_End);
+    float fogStart = float(Fog_Start);
+
+    #if Fog_End < Fog_Start
+        timeFog = saturate(rescale(time, fogStart, fogStart + Fog_Clear_Time)) + (1.0 - saturate(rescale(time, fogEnd, fogEnd + Fog_Clear_Time)));
+    #else
+        timeFog = saturate(rescale(time, fogStart, fogStart + Fog_Clear_Time)) * (1.0 - saturate(rescale(time, fogEnd, fogEnd + Fog_Clear_Time)));
+    #endif
 }
