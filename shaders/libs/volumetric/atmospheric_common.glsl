@@ -3,7 +3,7 @@
     const vec3  rayleigh_absorption         = vec3(0.0);
     const float rayleigh_distribution       = 8000.0;
 
-    const vec3  mie_scattering              = vec3(4.0, 4.0, 4.0) * 1e-6;
+    const vec3  mie_scattering              = vec3(2.0, 2.0, 2.0) * 1e-6;
     const vec3  mie_absorption              = mie_scattering * 0.11;
     const float mie_distribution            = 1200.0;
 
@@ -28,46 +28,27 @@
     const float atmosphere_radius           = Atmosphere_Radius;
 #endif
 
-    #define Linear_Fog 0
-    #define Exponential_Fog 1
+    //#define Near_Atmosphere_Clouds_Shadow
 
-    #define Fog_Distribution_Term Exponential_Fog
-    #define Fog_Exponential_Fog_Vaule 16.0
-    #define Fog_Exponential_Fog_Bottom 2.0
-    #define Fog_Linear_Fog_Vaule 48.0
-    #define Fog_Linear_Fog_Bottom -8.0
-    #define Fog_Reduce_Density_Far 0.005    //[0.0 0.001 0.0025 0.005 0.0075 0.01]
+    #define Fog_End 500                             //[500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 8500 9000 9500 10000 10500 11000 11500 12000 12500 13000 13500 14000 14500 15000 15500 16000 16500 17000 17500 18000 18500 19000 19500 20000 20500 21000 21500 22000 22500 23000 23500]
+    #define Fog_Start 22000                         //[500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 8500 9000 9500 10000 10500 11000 11500 12000 12500 13000 13500 14000 14500 15000 15500 16000 16500 17000 17500 18000 18500 19000 19500 20000 20500 21000 21500 22000 22500 23000 23500]
+    #define Fog_Clear_Time 1000.0                   //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0 1000.0 1500.0 2000.0 2500.0 3000.0 3500.0 4000.0 4500.0 5000.0 5500.0 6000.0]
 
-    #define Rain_Fog_Distribution_Term Exponential_Fog
-    #define Rain_Fog_Exponential_Fog_Vaule 1000.0
-    #define Rain_Fog_Exponential_Fog_Bottom 2.0
-    #define Rain_Fog_Linear_Fog_Vaule 2000.0
-    #define Rain_Fog_Linear_Fog_Bottom -8.0
-    #define Rain_Fog_Reduce_Density_Far 0.0    //[0.0 0.001 0.0025 0.005 0.0075 0.01]
+    #define Fog_Density 1.0                         //[0.1 0.5 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
+    #define Fog_Exponential_Fog_Vaule 16.0          //[1.0 2.0 4.0 8.0 16.0 32.0 64.0]
+    #define Fog_Exponential_Fog_Bottom 2.0          //[1.0 2.0 4.0 8.0 16.0 32.0 64.0]
+    #define Fog_Reduce_Density_Far 0.005            //[0.0 0.001 0.0025 0.005 0.0075 0.01]
+
+    #define Rain_Fog_Density 1.0                    //[0.1 0.5 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
+    #define Rain_Fog_Exponential_Fog_Vaule 1000.0   //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0 1000.0 1500.0 2000.0]
+    #define Rain_Fog_Exponential_Fog_Bottom 2.0     //[1.0 2.0 4.0 8.0 16.0 32.0 64.0]
+    #define Rain_Fog_Reduce_Density_Far 0.0         //[0.0 0.001 0.0025 0.005 0.0075 0.01]
 
     const vec3 fog_scattering = vec3(0.001);
     const vec3 fog_absorption = vec3(0.0);
 
     #define Reduce_Fog_Indoor_Density
     #define Reduce_Fog_Bottom_Density
-    #define Reduce_Far_Fog_Density
-
-    #define Weather_Fog_Thickness 2000.0
-    #define Fog_Thickness 48.0
-
-    #define Fog_Density 1.0
-    #define Rain_Fog_Density 2.0
-    #define Snow_Fog_Density 4.0
-
-    //#define Fog_Start_Height Default              //[Default Custom]
-    //#define Fog_Start_Height_Vaule 58.0
-    //#define Fog_Thickness 32.0
-    //#define Fog_Linear_Low_Density_Top 0.5
-    //#define Fog_Linear_Low_Density_Bottom 0.1
-
-    //const float fog_thickness = Fog_Thickness * Fog_Linear_Low_Density_Top;
-    //const float fog_distribution = Fog_Thickness * (1.0 - Fog_Linear_Low_Density_Top);
-    //const float fog_distribution_bottom = Fog_Thickness * Fog_Linear_Low_Density_Bottom;
 
 #define Fog_Scattering_R 0.0005
 #define Fog_Scattering_G 0.0005

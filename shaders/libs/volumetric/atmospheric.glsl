@@ -25,21 +25,20 @@ vec3 CalculateLocalInScattering(in vec3 rayOrigin, in vec3 rayDirection) {
 
     float stepLength = tracingAtmosphere.y * invsteps;
 
-    vec3 opticalDepth = vec3(0.0);
+    vec3 tau = vec3(0.0);
 
     for(int i = 0; i < steps; i++) {
-        vec3 p = rayOrigin + rayDirection * (stepLength + stepLength * float(i));
+        vec3 p = rayOrigin + rayDirection * (stepLength * (0.5 + float(i)));
         float h = max(1e-5, length(p) - planet_radius);
 
-        float density_rayleigh  = stepLength * exp(-h / rayleigh_distribution);
-        float density_mie       = stepLength * exp(-h / mie_distribution);
-        float density_ozone     = stepLength * max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
+        float density_rayleigh  = exp(-h / rayleigh_distribution);
+        float density_mie       = exp(-h / mie_distribution);
+        float density_ozone     = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
 
-        opticalDepth += vec3(density_rayleigh, density_mie, density_ozone);
+        tau += (rayleigh_scattering + rayleigh_absorption) * density_rayleigh + (mie_scattering + mie_absorption) * density_mie + (ozone_absorption + ozone_scattering) * density_ozone;
     }
 
-    vec3 tau = (rayleigh_scattering + rayleigh_absorption) * opticalDepth.x + (mie_scattering + mie_absorption) * opticalDepth.y + (ozone_absorption + ozone_scattering) * opticalDepth.z;
-    vec3 transmittance = exp(-tau);
+    vec3 transmittance = exp(-tau * stepLength);
 
     return transmittance * planetShadow;
 }
@@ -67,8 +66,10 @@ void CalculateAtmosphericScattering(inout vec3 color, inout vec3 atmosphere_colo
 
     vec3 transmittance = vec3(1.0);
 
+    vec3 rayStart = rayOrigin + rayDirection * start + rayDirection * stepLength * 0.5;
+
     for(int i = 0; i < steps; i++) {
-        vec3 p = rayOrigin + rayDirection * (stepLength + stepLength * float(i) + start);
+        vec3 p = rayStart + rayDirection * stepLength * float(i);
         float h = max(1e-5, length(p) - planet_radius);
 
         float density_rayleigh  = exp(-h / rayleigh_distribution);

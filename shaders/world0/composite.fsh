@@ -79,7 +79,7 @@ float R2Dither(in vec2 coord){
 #include "/libs/volumetric/clouds_common.glsl"
 #include "/libs/volumetric/clouds_env.glsl"
 
-vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint, float sampleHeight) {
+vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint, in float density) {
     vec2 tracingAtmosphere = RaySphereIntersection(rayOrigin, L, vec3(0.0), atmosphere_radius);
     if(tracingAtmosphere.y < 0.0) return vec3(1.0);
 
@@ -87,24 +87,40 @@ vec3 SimpleLightExtinction(in vec3 rayOrigin, in vec3 L, float samplePoint, floa
     float planetShadow = tracingPlanet.x > 0.0 ? exp(-(tracingPlanet.y - tracingPlanet.x) * 0.00001) : 1.0;
     //if(tracingPlanet.x > 0.0) return vec3(0.0);
 
-    float stepLength = tracingAtmosphere.y * samplePoint;
+    /*
+    float stepLength = tracingAtmosphere.y * 0.125;
+    vec3 tau = vec3(0.0);
 
-    float h = length(rayOrigin + (tracingAtmosphere.y * sampleHeight) * L) - planet_radius;
+    for(int i = 0; i < 8; i++) {
+        float h = length(rayOrigin + L * 0.125 * stepLength * (float(i) + 0.5)) - planet_radius;
 
-    float density_rayleigh  = stepLength * exp(-h / rayleigh_distribution);
-    float density_mie       = stepLength * exp(-h / mie_distribution);
+        float density_rayleigh  = exp(-h / rayleigh_distribution) * density;
+        float density_mie       = exp(-h / mie_distribution) * density;
+
+        tau += (rayleigh_scattering + rayleigh_absorption) * density_rayleigh + (mie_scattering + mie_absorption) * density_mie;
+    }
+
+    vec3 transmittance = exp(-tau * stepLength);
+    */
+
+    float h = mix(rayOrigin.y, atmosphere_radius, samplePoint) - planet_radius;
+
+    float density_rayleigh  = exp(-h / rayleigh_distribution) * density;
+    float density_mie       = exp(-h / mie_distribution) * density;
 
     vec3 tau = (rayleigh_scattering + rayleigh_absorption) * density_rayleigh + (mie_scattering + mie_absorption) * density_mie;
-    vec3 transmittance = exp(-tau);
+    vec3 transmittance = exp(-tau * tracingAtmosphere.y);
 
     return transmittance * planetShadow;
 }
-vec3 CalculateHighQualityLightingColor(in vec3 rayOrigin, in vec3 L) {
+
+vec3 CalculateHighQualityLightingColor(in vec3 rayOrigin, in vec3 L, in float density) {
     const int steps = 6;
     const float invsteps = 1.0 / float(steps);
 
     vec2 tracingPlanet = RaySphereIntersection(rayOrigin, L, vec3(0.0), planet_radius);
     float planetShadow = tracingPlanet.x > 0.0 ? exp(-(tracingPlanet.y - tracingPlanet.x) * 0.00001) : 1.0;
+    if(planetShadow < 1e-5) return vec3(0.0);
 
     vec2 tracingLight = RaySphereIntersection(rayOrigin, L, vec3(0.0), atmosphere_radius);
     float stepLength = tracingLight.y * invsteps;
@@ -112,7 +128,7 @@ vec3 CalculateHighQualityLightingColor(in vec3 rayOrigin, in vec3 L) {
     vec3 opticalDepth = vec3(0.0);
 
     for(int i = 0; i < steps; i++) {
-        vec3 position = rayOrigin + (1.0 + float(i)) * stepLength * L;
+        vec3 position = rayOrigin + (0.5 + float(i)) * stepLength * L;
         float height = length(position) - planet_radius;
 
         float Hm = exp(-height / mie_distribution);
@@ -122,7 +138,7 @@ vec3 CalculateHighQualityLightingColor(in vec3 rayOrigin, in vec3 L) {
         opticalDepth += (mie_scattering + mie_absorption) * Hm + (rayleigh_scattering + rayleigh_absorption) * Hr + (ozone_absorption + ozone_scattering) * Ho;
     }
 
-    vec3 transmittance = exp(-opticalDepth * stepLength);
+    vec3 transmittance = exp(-opticalDepth * stepLength * density);
 
     return transmittance * planetShadow;
 }
@@ -187,9 +203,9 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
     vec3 lightPosition = top * direction + vec3(0.0, origin.y, 0.0);
 
     #if Clouds_Sun_Lighting_Color == High
-    vec3 SunColor = SimpleLightExtinction(lightPosition, worldSunVector, 0.5, 0.25) * Sun_Light_Luminance;
+    vec3 SunColor = SimpleLightExtinction(lightPosition, worldSunVector, 0.2, 1.0) * Sun_Light_Luminance;
     #elif Clouds_Sun_Lighting_Color > High
-    vec3 SunColor = CalculateHighQualityLightingColor(lightPosition, worldSunVector) * Sun_Light_Luminance;
+    vec3 SunColor = CalculateHighQualityLightingColor(lightPosition, worldSunVector, 1.0) * Sun_Light_Luminance;
     #else
     vec3 SunColor = SunLightingColor;
     #endif
@@ -197,9 +213,9 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
     vec3 SunLight = SunColor * sunPhase;
 
     #if Clouds_Moon_Lighting_Color == High
-    vec3 MoonColor = SimpleLightExtinction(lightPosition, worldMoonVector, 0.5, 0.25) * Moon_Light_Luminance;
+    vec3 MoonColor = SimpleLightExtinction(lightPosition, worldMoonVector, 0.2, 1.0) * Moon_Light_Luminance;
     #elif Clouds_Moon_Lighting_Color > High
-    vec3 MoonColor = CalculateHighQualityLightingColor(lightPosition, worldMoonVector) * Moon_Light_Luminance;
+    vec3 MoonColor = CalculateHighQualityLightingColor(lightPosition, worldMoonVector, 1.0) * Moon_Light_Luminance;
     #else
     vec3 MoonColor = MoonLightingColor;
     #endif
@@ -332,7 +348,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
     float phaseMieMoon = HG(-theta, 0.76);
     vec3 mieMoonLight = vec3(moonLuminance * phaseMieMoon);
 
-    float fogSunLight = lightHG * Sun_Light_Luminance * mix(HG(theta, -0.1), HG(theta, 0.7), 0.2);
+    float fogSunLight = lightHG * Sun_Light_Luminance * mix(HG(theta, -0.1), HG(theta, 0.7), 0.4);
     float fogAmbientLight = (sunLuminance + moonLuminance) * HG(abs(worldSunVector.y), 0.76);
 
     float phaseRayleigh2 = (3.0 / 16.0 / Pi) * (1.0 + worldSunVector.y * worldSunVector.y);
@@ -380,41 +396,34 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
 
         vec3 cloudsShadow = vec3(1.0);
 
+        #ifdef Near_Atmosphere_Clouds_Shadow
         cloudsShadow = CloudsShadow((currentPosition - rayStart), worldLightVector, origin + vec3(0.0, planet_radius, 0.0), vec2(0.05, 0.7), 1.0, High);
+        #endif
 
-        vec3 cloudsOccluasion = vec3(1.0);
+        vec3 cloudsOccluasion = vec3(0.5);
         
-        cloudsOccluasion = vec3(0.5);//CloudsShadow(currentPosition - rayStart, worldUpVector, origin + vec3(0.0, planet_radius, 0.0), vec2(0.05, 1.0), 0.5, High);
+        //cloudsOccluasion = CloudsShadow(currentPosition - rayStart, worldUpVector, origin + vec3(0.0, planet_radius, 0.0), vec2(0.05, 1.0), 0.5, High);
 
         vec3 lightVisibility = vec3(visibility) * cloudsShadow;
         vec3 skylightVisibility = cloudsOccluasion;
 
-        float Dm = exp(-height / mie_distribution) * 1.0;
+        float Dm = exp(-height / mie_distribution);
         vec3 Tm = (mie_absorption + mie_scattering) * Dm;
 
-        float Dr = exp(-height / rayleigh_distribution) * 1.0;
+        float Dr = exp(-height / rayleigh_distribution);
         vec3 Tr = (rayleigh_absorption + rayleigh_scattering) * Dr;
 
-        #if Fog_Distribution_Term == Linear_Fog
-        float Dfog = (1.0 - saturate(height / Fog_Linear_Fog_Vaule)) * saturate((noclampedHeight - Fog_Linear_Fog_Bottom) / abs(Fog_Linear_Fog_Bottom)) * exp(-rayLength * Fog_Reduce_Density_Far) * 100.0;
-        #else
-        float Dfog = exp(-height / Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Fog_Exponential_Fog_Bottom) * exp(-rayLength * Fog_Reduce_Density_Far);
-        #endif
+        float Dfog = exp(-height / Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Fog_Exponential_Fog_Bottom) * exp(-rayLength * Fog_Reduce_Density_Far) * Fog_Density;
+        float Dweather = exp(-height / Rain_Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Rain_Fog_Exponential_Fog_Bottom) * Rain_Fog_Density;
 
-        #if Rain_Fog_Distribution_Term == Linear_Fog
-        float Dweather = (1.0 - saturate(height / Rain_Fog_Linear_Fog_Vaule)) * (saturate((noclampedHeight - Rain_Fog_Exponential_Fog_Bottom) / abs(Rain_Fog_Exponential_Fog_Bottom)));
-        #else
-        float Dweather = exp(-height / Rain_Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Rain_Fog_Exponential_Fog_Bottom);
-        #endif
-
-        vec3 Tfog = fog_scattering * mix(Dfog, Dweather, rainStrength);
+        vec3 Tfog = fog_scattering * 0.0;//mix(Dfog * timeFog, Dweather, rainStrength);
 
         vec3 extinction = Tm + Tr + Tfog;
 
         vec3 stepExtinction = exp(-stepLength * extinction);
 
-        vec3 sunLightExtinction = SimpleLightExtinction(currentPosition + vec3(0.0, planet_radius, 0.0), worldSunVector, 1.0, 0.2);
-        vec3 moonLightExtinction = SimpleLightExtinction(currentPosition + vec3(0.0, planet_radius, 0.0), worldMoonVector, 1.0, 0.2);
+        vec3 sunLightExtinction = SimpleLightExtinction(currentPosition + vec3(0.0, planet_radius, 0.0), worldSunVector, 0.2, 1.0);
+        vec3 moonLightExtinction = SimpleLightExtinction(currentPosition + vec3(0.0, planet_radius, 0.0), worldMoonVector, 0.2, 1.0);
 
         vec3 m = Dm * mie_scattering;
         vec3 r = Dr * rayleigh_scattering;
@@ -437,7 +446,8 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
             tracingFogUp = max(0.0, RaySphereIntersection(samplePosition + vec3(0.0, planet_radius, 0.0), worldUpVector, vec3(0.0), planet_radius + 2000.0).y);
         }
 
-        vec3 lightSampleTransmittance = fog_scattering * exp(-mix(height, 2000.0, 0.5) / mix(Fog_Exponential_Fog_Vaule, Rain_Fog_Exponential_Fog_Vaule, rainStrength));// * (1.0 - saturate(mix(height, 2000.0, 0.5) / Fog_Linear_Fog_Vaule));//
+        float halfHeight = mix(height, 2000.0, 0.5);
+        vec3 lightSampleTransmittance = fog_scattering * mix(exp(-halfHeight / Fog_Exponential_Fog_Vaule) * timeFog, exp(-halfHeight / Rain_Fog_Exponential_Fog_Vaule), rainStrength);
 
         vec3 fogSunLighting = fogSunLight * lightVisibility * CalculateFogLight(tracingFogSun, lightSampleTransmittance);
         vec3 fogambientLighting = fogAmbientLight * skylightVisibility * CalculateFogLight(tracingFogUp, lightSampleTransmittance);

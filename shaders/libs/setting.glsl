@@ -91,8 +91,8 @@
 #define Near_Atmosphere_Upscale_Quality Medium      //[Medium High] medium:only temporal filter, high:spatio and temporal filter
 
 #define Near_Atmosphere_Quality High                //[Medium High Ultra]
-    #define Near_Atmosphere_Density 2               //[1 2 3 4 5 6 7 8 9 10 20 30 40 50 60 70 80 90 100]
-    #define Near_Atmosphere_Distribution 50.0       //[1.0 10.0 50.0 100.0 500.0 1000.0]
+    #define Near_Atmosphere_Density 20.0            //[1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
+    #define Near_Atmosphere_Height 1.0              //[1.0 10.0 50.0 100.0 500.0 1000.0]
 
 #define Near_Atmospheric_Scattering_Max_Tracing 4000.0 //lower vaule cause clouds edge or far environment look weird
 

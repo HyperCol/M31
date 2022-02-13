@@ -189,7 +189,8 @@ void main() {
     }
 
     float height = max(0.05, v0.wP.y + cameraPosition.y - 63.0);
-    vec3 Tfog = fog_scattering * exp(-mix(height, 2000.0, 0.5) / mix(Fog_Exponential_Fog_Vaule, Rain_Fog_Exponential_Fog_Vaule, rainStrength));
+    float halfHeight = mix(height, 2000.0, 0.5);
+    vec3 Tfog = fog_scattering * mix(exp(-halfHeight / Fog_Exponential_Fog_Vaule) * Fog_Density * timeFog, exp(-halfHeight / Rain_Fog_Exponential_Fog_Vaule) * Rain_Fog_Density, rainStrength);
 
     float tracingFogSun = max(0.0, IntersectPlane(vec3(0.0, height, 0.0), worldLightVector, vec3(0.0, 2000.0, 0.0), vec3(0.0, 1.0, 0.0)));
     vec3 sunLightExtinction = CalculateFogLight(tracingFogSun, Tfog);
