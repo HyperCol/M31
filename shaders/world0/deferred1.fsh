@@ -189,14 +189,14 @@ void main() {
     }
 
     float height = max(0.05, v0.wP.y + cameraPosition.y - 63.0);
-    float halfHeight = mix(height, 2000.0, 0.5);
+    float halfHeight = mix(height, 2000.0, 0.1);
     vec3 Tfog = fog_scattering * mix(exp(-halfHeight / Fog_Exponential_Fog_Vaule) * Fog_Density * timeFog, exp(-halfHeight / Rain_Fog_Exponential_Fog_Vaule) * Rain_Fog_Density, rainStrength);
 
     float tracingFogSun = max(0.0, IntersectPlane(vec3(0.0, height, 0.0), worldLightVector, vec3(0.0, 2000.0, 0.0), vec3(0.0, 1.0, 0.0)));
-    vec3 sunLightExtinction = CalculateFogLight(tracingFogSun, Tfog);
+    vec3 sunLightExtinction = min(CalculateFogLight(tracingFogSun, Tfog) / 0.999, vec3(1.0));
 
     float tracingFogUp = max(0.0, IntersectPlane(vec3(0.0, height, 0.0), worldUpVector, vec3(0.0, 2000.0, 0.0), vec3(0.0, 1.0, 0.0)));
-    vec3 skyLightExtinction = CalculateFogLight(tracingFogUp, Tfog);
+    vec3 skyLightExtinction = min(CalculateFogLight(tracingFogUp, Tfog) / 0.999, vec3(1.0));
 
     #if Clouds_Shadow_Quality > OFF
         #if Clouds_Shadow_Quality < High
@@ -204,6 +204,8 @@ void main() {
         #else
         shading *= CloudsShadowRayMarching(v0.wP * Altitude_Scale, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
         #endif
+    #else
+        shading *= mix(1.0, 0.2, rainStrength);
     #endif
 
     color += sunLight * LightingColor * shading * shadowFade * sunLightExtinction;
@@ -227,6 +229,8 @@ void main() {
         #else
         AmbientLight *= CloudsShadowRayMarching(v0.wP, worldUpVector, origin, vec2(Clouds_Sky_Occlusion_Tracing_Bottom, Clouds_Sky_Occlusion_Tracing_Top), Clouds_Sky_Occlusion_Transmittance, Clouds_Sky_Occlusion_Quality);
         #endif
+    #else
+        AmbientLight *= mix(1.0, 0.5, rainStrength);
     #endif
 
     color += AmbientLight * skyLightExtinction;

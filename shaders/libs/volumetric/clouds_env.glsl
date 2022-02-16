@@ -6,6 +6,7 @@ vec3 CloudsShadow(in vec3 worldPosition, in vec3 L, in vec3 origin, in vec2 Trac
     float stepLength = min(8000.0, rayEnd - rayStart);
 
     rayStart += stepLength * TracingClamp.x;
+    if(tracingClouds.x < 1.0) rayStart += stepLength * 0.125;
 
     vec3 rayPosition = worldPosition + origin + rayStart * L;
 

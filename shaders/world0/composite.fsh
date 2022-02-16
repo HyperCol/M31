@@ -152,7 +152,7 @@ vec3 CalculateCloudsLightExtinction(in vec3 rayPosition, in vec3 L, in vec3 rayO
     vec3 lightExtinction = vec3(1.0);
         
     if(tracingLight.y > 0.0) {
-        float lightStepLength = min(8000.0, tracingLight.y * 0.5) * invsteps;
+        float lightStepLength = min(8000.0, tracingLight.y) * invsteps * min(1.0, 0.05 * float(steps));
         vec3 lightPosition = rayPosition + dither * L * lightStepLength;
 
         float opticalDepth = 0.0;
@@ -400,7 +400,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
         cloudsShadow = CloudsShadow((currentPosition - rayStart), worldLightVector, origin + vec3(0.0, planet_radius, 0.0), vec2(0.05, 0.7), 1.0, High);
         #endif
 
-        vec3 cloudsOccluasion = vec3(0.5);
+        vec3 cloudsOccluasion = vec3(mix(1.0, 0.5, rainStrength));
         
         //cloudsOccluasion = CloudsShadow(currentPosition - rayStart, worldUpVector, origin + vec3(0.0, planet_radius, 0.0), vec2(0.05, 1.0), 0.5, High);
 
@@ -416,7 +416,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
         float Dfog = exp(-height / Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Fog_Exponential_Fog_Bottom) * exp(-rayLength * Fog_Reduce_Density_Far) * Fog_Density;
         float Dweather = exp(-height / Rain_Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Rain_Fog_Exponential_Fog_Bottom) * Rain_Fog_Density;
 
-        vec3 Tfog = fog_scattering * 0.0;//mix(Dfog * timeFog, Dweather, rainStrength);
+        vec3 Tfog = fog_scattering * mix(Dfog * timeFog, Dweather, rainStrength);
 
         vec3 extinction = Tm + Tr + Tfog;
 
