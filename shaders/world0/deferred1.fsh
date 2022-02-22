@@ -182,10 +182,10 @@ void main() {
     vec3 shading = CalculateShading(vec3(texcoord, v0.depth), lightVector, m.geometryNormal, simplesss * 2.0);
          shading *= ScreenSpaceContactShadow(m, v0, lightVector, simplesss);
 
-    vec3 sunLight = DiffuseLighting(m, lightVector, v0.eyeDirection) + SpecularLighting(m, lightVector, v0.eyeDirection);
+    vec3 sunLightShading = DiffuseLighting(m, lightVector, v0.eyeDirection) + SpecularLighting(m, lightVector, v0.eyeDirection);
 
     if(simplesss > 0.5 && m.material > 65.0) {
-        sunLight += LeavesShading(lightVector, v0.eyeDirection, m.texturedNormal, m.albedo.rgb, m.transmittance, m.scattering);
+        sunLightShading += LeavesShading(lightVector, v0.eyeDirection, m.texturedNormal, m.albedo.rgb, m.transmittance, m.scattering);
     }
 
     float height = max(0.05, v0.wP.y + cameraPosition.y - 63.0);
@@ -205,23 +205,34 @@ void main() {
         shading *= CloudsShadowRayMarching(v0.wP * Altitude_Scale, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
         #endif
     #else
-        shading *= mix(1.0, 0.2, rainStrength);
+        shading *= mix(1.0, 0.5, rainStrength);
     #endif
 
-    color += sunLight * LightingColor * shading * shadowFade * sunLightExtinction;
+    vec3 sunLight = sunLightShading * LightingColor * shading * shadowFade * sunLightExtinction;
+
+    color += sunLight;
+
 
     float ao = ScreenSpaceAmbientOcclusion(m, v0);
 
     float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0));
     float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 8.0, 1.0));
+    float skylightMap = mix(SkyLighting0, SkyLighting1, 0.7);
+
+    vec3 weatherLighting = SunLightingColor * Tfog * tracingFogSun * sunLightExtinction;
+
+    vec3 weatherLighting2 = sunLight * weatherLighting * mix(HG(0.8, -0.1), HG(0.8, 0.7), 0.4);
+    color += weatherLighting2 * skylightMap;
+
+    vec3 weatherLighting1 = invPi * m.albedo * weatherLighting * mix(HG(abs(worldSunVector.y), -0.1), HG(abs(worldSunVector.y), 0.7), 0.4);
+    color += weatherLighting1 * ao * skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
 
     vec3 AmbientLightColor = SkyLightingColor;
-         //AmbientLightColor += LightingColor * atmospheric.fogScattering * (tracingFogUp * 0.5) * CalculateFogPhaseFunction(worldLightVector.y, atmospheric);
 
     vec3 AmbientLight = vec3(0.0);
          AmbientLight += m.albedo * LightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
          AmbientLight += m.albedo * AmbientLightColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
-         AmbientLight *= mix(SkyLighting0, SkyLighting1, 0.7) * (1.0 - m.metal) * (1.0 - m.metallic);
+         AmbientLight *= skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
 
     #if Clouds_Sky_Occlusion_Quality > OFF
         #if Clouds_Sky_Occlusion_Quality < High
