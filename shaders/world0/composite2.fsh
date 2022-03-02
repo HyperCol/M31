@@ -3,6 +3,9 @@
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
 
+uniform ivec2 eyeBrightnessSmooth;
+uniform ivec2 eyeBrightness;
+
 #include "/libs/setting.glsl"
 #include "/libs/common.glsl"
 #include "/libs/uniform.glsl"
@@ -1002,6 +1005,13 @@ void main() {
 
         vec3 transmittance = texture(colortex10, coord).rgb * texture(colortex9, coord).a;
         vec3 scattering = texture(colortex9, coord).rgb;
+
+        #ifdef Reduce_Fog_Indoor_Density
+            float indoorDensity = max(float(eyeBrightness.y) / 240.0, m.lightmap.y);
+            
+            transmittance = mix(vec3(1.0), transmittance, vec3(indoorDensity));
+            scattering = mix(vec3(0.0), scattering, vec3(indoorDensity));
+        #endif
 
         color *= transmittance;
         color += scattering;
