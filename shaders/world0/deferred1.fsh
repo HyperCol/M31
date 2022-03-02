@@ -179,8 +179,10 @@ void main() {
 
     float simplesss = m.fullBlock < 0.5 && m.material > 65.0 ? 1.0 : 0.0;
 
+    float contactShadow = ScreenSpaceContactShadow(m, v0, lightVector, simplesss);
+
     vec3 shading = CalculateShading(vec3(texcoord, v0.depth), lightVector, m.geometryNormal, simplesss * 2.0);
-         shading *= ScreenSpaceContactShadow(m, v0, lightVector, simplesss);
+         shading *= contactShadow;
 
     vec3 sunLightShading = DiffuseLighting(m, lightVector, v0.eyeDirection) + SpecularLighting(m, lightVector, v0.eyeDirection);
 
@@ -212,7 +214,6 @@ void main() {
 
     color += sunLight;
 
-
     float ao = ScreenSpaceAmbientOcclusion(m, v0);
 
     float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0));
@@ -229,9 +230,15 @@ void main() {
 
     vec3 AmbientLightColor = SkyLightingColor;
 
-    vec3 AmbientLight = vec3(0.0);
-         AmbientLight += m.albedo * LightingColor * (saturate(dot(m.texturedNormal, sunVector)) * HG(dot(m.texturedNormal, sunVector), 0.1) * HG(0.5, 0.76) * invPi);
-         AmbientLight += m.albedo * AmbientLightColor * (rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0) * invPi);
+    vec3 SkyLighting = AmbientLightColor * rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0);
+
+    float t1 = dot(m.texturedNormal, sunVector);
+    float t2 = -t1;
+
+    vec3 SunGlowLighting = SunLightingColor * saturate(min(0.02, rescale(t1, -0.5, 1.0)) * HG(t1, 0.76)) + MoonLightingColor * saturate(min(0.02, rescale(t2, -0.5, 1.0)) * HG(t2, 0.76));
+         SunGlowLighting *= contactShadow;
+
+    vec3 AmbientLight = (SkyLighting + SunGlowLighting) * m.albedo * invPi;
          AmbientLight *= skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
 
     #if Clouds_Sky_Occlusion_Quality > OFF

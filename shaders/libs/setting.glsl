@@ -21,7 +21,7 @@
 #define Custom 1
 
 //Lighting Setting
-#define Sun_Light_Luminance 4.0
+#define Sun_Light_Luminance 6.0
 #define Moon_Light_Luminance 0.5
 #define Blocks_Light_Luminance 0.2
 #define Nature_Light_Min_Luminance 0.1

@@ -88,21 +88,22 @@ void main() {
     //make sure samplePosition.y > planet_radius
     vec3 samplePosition = vec3(0.0, planet_radius + 1.0, 0.0);
 
-    float theta     = mix(0.0, dot(upVector, sunVector), 1.0);
+    float theta     = dot(upVector, sunVector);
+    float theta2    = mix(0.0, theta, 1.0);
     float silverIntensity = 1.0;
-    float phasem    = min(HG(theta, 0.76) * silverIntensity, 1.0);
-    float phasem2   = min(HG(-theta, 0.76) * silverIntensity, 1.0);
-    float phaser    = min((3.0 / 16.0 / Pi) * (1.0 + theta * theta) * silverIntensity, 1.0);
+    float phasem    = min(HG(theta2, 0.76) * silverIntensity, 1.0);
+    float phasem2   = min(HG(-theta2, 0.76) * silverIntensity, 1.0);
+    float phaser    = min((3.0 / 16.0 / Pi) * (1.0 + theta2 * theta2) * silverIntensity, 1.0);
 
     SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.2, 1.0) * Sun_Light_Luminance;
     MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.2, 1.0) * Moon_Light_Luminance;
     LightingColor       = SunLightingColor + MoonLightingColor;
 
-    float lighting2 = Sun_Light_Luminance * invPi;
-    float lighting3 = Moon_Light_Luminance * invPi;
+    float sunlightLuminance = sum3(SunLightingColor) + Sun_Light_Luminance * saturate(theta * 256.0);
+    float moonlightLuminance = sum3(MoonLightingColor) + Moon_Light_Luminance * saturate(-theta * 256.0);
 
-    vec3 rayleighLighting = rayleigh_scattering * phaser * (LightingColor + lighting2 + lighting3);
-    vec3 mieLighting = mie_scattering * phasem * (sum3(SunLightingColor) + lighting2) + mie_scattering * phasem2 * (sum3(MoonLightingColor) + lighting3);
+    vec3 rayleighLighting = rayleigh_scattering * phaser * (sunlightLuminance + moonlightLuminance);
+    vec3 mieLighting = mie_scattering * phasem * sunlightLuminance + mie_scattering * phasem2 * moonlightLuminance;
     vec3 skyLighting = SimpleInScattering(samplePosition, worldUpVector, worldSunVector, 0.5, 0.5);
 
     SkyLightingColor = skyLighting * (mieLighting + rayleighLighting) / (rayleigh_scattering + mie_scattering);
