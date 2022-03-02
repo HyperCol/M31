@@ -200,17 +200,19 @@ void main() {
     float tracingFogUp = max(0.0, IntersectPlane(vec3(0.0, height, 0.0), worldUpVector, vec3(0.0, 2000.0, 0.0), vec3(0.0, 1.0, 0.0)));
     vec3 skyLightExtinction = min(CalculateFogLight(tracingFogUp, Tfog) / 0.999, vec3(1.0));
 
+    vec3 cloudsShadow = vec3(1.0);
+
     #if Clouds_Shadow_Quality > OFF
         #if Clouds_Shadow_Quality < High
-        shading *= CloudsShadow(v0.wP * Altitude_Scale, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
+        cloudsShadow = CloudsShadow(v0.wP * Altitude_Scale, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
         #else
-        shading *= CloudsShadowRayMarching(v0.wP * Altitude_Scale, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
+        cloudsShadow = CloudsShadowRayMarching(v0.wP * Altitude_Scale, worldLightVector, origin, vec2(Clouds_Shadow_Tracing_Bottom, Clouds_Shadow_Tracing_Top), Clouds_Shadow_Transmittance, Clouds_Shadow_Quality);
         #endif
     #else
-        shading *= mix(1.0, 0.5, rainStrength);
+        cloudsShadow = vec3(mix(1.0, 0.5, rainStrength));
     #endif
 
-    vec3 sunLight = sunLightShading * LightingColor * shading * shadowFade * sunLightExtinction;
+    vec3 sunLight = sunLightShading * LightingColor * shading * cloudsShadow * shadowFade * sunLightExtinction;
 
     color += sunLight;
 
@@ -236,6 +238,7 @@ void main() {
     float t2 = -t1;
 
     vec3 SunGlowLighting = SunLightingColor * saturate(min(0.02, rescale(t1, -0.5, 1.0)) * HG(t1, 0.76)) + MoonLightingColor * saturate(min(0.02, rescale(t2, -0.5, 1.0)) * HG(t2, 0.76));
+         SunGlowLighting *= cloudsShadow;
          SunGlowLighting *= contactShadow;
 
     vec3 AmbientLight = (SkyLighting + SunGlowLighting) * m.albedo * invPi;
