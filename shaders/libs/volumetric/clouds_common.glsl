@@ -30,10 +30,11 @@ float GetCloudsMap(in vec3 position, in float height) {
 
     vec3 shapeCoord = worldPosition * 0.0005;
     float shape = (noise(shapeCoord.xy) + noise(shapeCoord.xy * 2.0) * 0.5) / 1.5;
+          shape = shape + pow(max(0.0, rescale(shape, 0.2, 1.0)), 0.1) - 1.0;
 
     float shape2 = (noise(shapeCoord * 4.0) + noise(shapeCoord * 8.0) * 0.5) / 1.5;
 
-    float density = max(0.0, rescale(mix(shape2, shape, 0.7), 0.1, 1.0));
+    float density = max(0.0, rescale(mix(shape, shape2, 0.3), 0.1, 1.0));
 
     return density;
 }
@@ -51,7 +52,7 @@ float GetCloudsMapDetail(in vec3 position, in float shape, in float distortion) 
 } 
 
 float GetCloudsCoverage(in float linearHeight) { 
-    return pow(0.7 - 0.4 * rainStrength, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.3)) * saturate(rescale(linearHeight, -0.01, 0.01)));
+    return pow(mix(0.7, 0.3, rainStrength), remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.3)) * saturate(rescale(linearHeight, -0.01, 0.01)));
 }
 
 float CalculateCloudsCoverage(in float height, in float clouds) {
