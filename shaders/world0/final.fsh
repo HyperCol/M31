@@ -160,7 +160,7 @@ void main() {
 	float ev100 = pow(texture(composite, vec2(0.5)).a, 2.2);
           ev100 = -ev100 / (ev100 - 1.0);
 		  ev100 = ev100 * MappingToHDR;
-		  ev100 = pow(ev100, 0.25);
+		  ev100 = pow(ev100, 0.2);
 		  ev100 = ev100 / K * 100.0;
 	#else
 	float ev100 = 25.0;
