@@ -175,7 +175,7 @@
 
 //Antialiasing
 #define Enabled_TAA
-#define TAA_Accumulation_Shapress 50                //[0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]
+#define TAA_Accumulation_Shapress 60                //[0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]
 #define TAA_Post_Processing_Sharpeness 50           //[0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]
-#define TAA_Post_Processing_Sharpen_Limit 0.25      //[0.025 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5]
+#define TAA_Post_Processing_Sharpen_Limit 0.005     //[0.001 0.002 0.003 0.004 0.005 0.006 0.007 0.008 0.009]
 //#define TAA_No_Clip

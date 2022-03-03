@@ -55,8 +55,8 @@ vec3 GetClosest(in vec2 coord) {
     return closest;
 }
 
-vec4 ReprojectSampler(in sampler2D tex, in vec2 pixelPos){
-    vec4 result = vec4(0.0);
+vec3 ReprojectSampler(in sampler2D tex, in vec2 pixelPos){
+    vec4 color = vec4(0.0);
 
     vec2 position = resolution * pixelPos;
     vec2 centerPosition = floor(position - 0.5) + 0.5;
@@ -65,7 +65,7 @@ vec4 ReprojectSampler(in sampler2D tex, in vec2 pixelPos){
     vec2 f2 = f * f;
     vec2 f3 = f * f2;
 
-    float c = 0.65;
+    float c = TAA_Accumulation_Shapress / 101.0;
     vec2 w0 =         -c  *  f3 + 2.0 * c          *  f2 - c  *  f;
     vec2 w1 =  (2.0 - c)  *  f3 - (3.0 - c)        *  f2            + 1.0;
     vec2 w2 = -(2.0 - c)  *  f3 + (3.0 - 2.0 * c)  *  f2 + c  *  f;
@@ -76,16 +76,13 @@ vec4 ReprojectSampler(in sampler2D tex, in vec2 pixelPos){
     vec2 tc0 = texelSize * (centerPosition - 1.0);
     vec2 tc3 = texelSize * (centerPosition + 2.0);
 
-    result =  vec4(texture(tex, vec2(tc12.x, tc0.y)).rgb, 1.0) * (w12.x * w0.y) +
-              vec4(texture(tex, vec2(tc0.x, tc12.y)).rgb, 1.0) * (w0.x * w12.y) +
-              vec4(texture(tex, vec2(tc12.x, tc12.y)).rgb, 1.0) * (w12.x * w12.y) +
-              vec4(texture(tex, vec2(tc3.x, tc12.y)).rgb, 1.0) * (w3.x * w12.y) +
-              vec4(texture(tex, vec2(tc12.x, tc3.y)).rgb, 1.0) * (w12.x * w3.y);
+    color = vec4((texture(tex, vec2(tc12.x, tc0.y)).rgb), 1.0) * (w12.x * w0.y) +
+            vec4((texture(tex, vec2(tc0.x, tc12.y)).rgb), 1.0) * (w0.x * w12.y) +
+            vec4((texture(tex, vec2(tc12.x, tc12.y)).rgb), 1.0) * (w12.x * w12.y) +
+            vec4((texture(tex, vec2(tc3.x, tc12.y)).rgb), 1.0) * (w3.x * w12.y) +
+            vec4((texture(tex, vec2(tc12.x, tc3.y)).rgb), 1.0) * (w12.x * w3.y);
 
-    result /= result.a;
-    result.rgb = saturate(result.rgb);
-
-    return result;
+    return saturate(color.rgb / color.a);
 }
 
 vec3 clipToAABB(vec3 color, vec3 minimum, vec3 maximum) {
@@ -164,12 +161,16 @@ void main() {
     vec2 previousCoord = texcoord - velocity;
     float InScreen = step(max(abs(previousCoord.x - 0.5), abs(previousCoord.y - 0.5)), 0.5);
 
-    vec3 previousColor = RGBToYCoCg(ReprojectSampler(colortex7, previousCoord).rgb);
+    vec3 previousColor = RGBToYCoCg(ReprojectSampler(colortex7, previousCoord));
 
     float blend = 0.98 * InScreen;
 
     vec3 v = YCoCgToRGB(variance);
-    blend -= step(0.05, velocityLength) * 0.08;// * saturate(rescale(sum3(v) / max(0.001, maxComponent(v)), 0.5, 1.0));
+
+    float velocityWeight = step(0.05, velocityLength) * 0.08;
+    float depthWeight = 0.2 * min(1.0, abs(ExpToLinerDepth(texture(depthtex0, texcoord).x) - ExpToLinerDepth(texture(depthtex0, previousCoord).x)));
+
+    blend -= max(depthWeight, velocityWeight);
 
     vec3 accumulation = clipToAABB(previousColor, minColor, maxColor);
          accumulation = mix(currentColor, accumulation, vec3(blend));

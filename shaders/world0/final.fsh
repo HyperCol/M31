@@ -111,22 +111,24 @@ vec4 GetBloomSample(inout vec2 offset, in float level) {
 }
 
 void main() {
-    vec3 color = LinearToGamma(texture(composite, texcoord).rgb);
-		 color *= MappingToHDR;
-	
+    vec3 color = texture(composite, texcoord).rgb;
+		 color = LinearToGamma(color) * MappingToHDR;
+
 	#if TAA_Post_Processing_Sharpeness > 0 && defined(Enabled_TAA)
 		vec3 sharpen = vec3(0.0);
 
 		for(float i = -1.0; i <= 1.0; i += 1.0) {
 			for(float j = -1.0; j <= 1.0; j += 1.0) {
 				if(i == 0.0 && j == 0.0) continue;
-				sharpen += LinearToGamma(texture(composite, texcoord + vec2(i, j) * texelSize).rgb) * MappingToHDR;
+				sharpen += texture(composite, texcoord + vec2(i, j) * texelSize).rgb;
 			}
 		}
 
-		sharpen = color - sharpen / 8.0;
+		sharpen /= 8.0;
+		sharpen = LinearToGamma(sharpen) * MappingToHDR;
+		sharpen = clamp((color - sharpen) * float(TAA_Post_Processing_Sharpeness) * 0.02, vec3(-TAA_Post_Processing_Sharpen_Limit), vec3(TAA_Post_Processing_Sharpen_Limit));
 
-		color = saturate(color + sharpen * 0.5 * TAA_Post_Processing_Sharpeness * 0.01);
+		color = saturate(color + sharpen);
 	#endif
 
 	vec4 bloom = vec4(0.0);
@@ -149,7 +151,6 @@ void main() {
 	#endif
 
 	#ifdef Enabled_Bloom
-	//color = mix(color, bloom.rgb * max(1.0, Bloom_Intensity), min(1.0, Bloom_Intensity));
 	color += bloom.rgb * exp2(Bloom_Exposure_Value);
 	#endif
 
@@ -159,7 +160,8 @@ void main() {
 	float ev100 = pow(texture(composite, vec2(0.5)).a, 2.2);
           ev100 = -ev100 / (ev100 - 1.0);
 		  ev100 = ev100 * MappingToHDR;
-		  ev100 = pow(ev100, 0.25) / K * 100.0;	
+		  ev100 = pow(ev100, 0.25);
+		  ev100 = ev100 / K * 100.0;
 	#else
 	float ev100 = 25.0;
 	#endif 
