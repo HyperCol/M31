@@ -285,7 +285,7 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
             vec3 S = (MoonLight + SunLight) * CalculateCloudsLightExtinction(currentPosition, worldLightVector, origin, dither2, High);
             #endif
 
-            vec3 CloudsScattering = S + SkyLightingColor * 0.047 * ((extinction + 0.5) / (1.0 + 0.5));
+            vec3 CloudsScattering = S + SkyLightingColor * 0.047 * ((extinction + 0.1) / (1.0 + 0.1));
                  CloudsScattering *= mediaSample.rgb;
 
             scattering += (CloudsScattering - CloudsScattering * extinction) * transmittance / (clouds_scattering * rescale(density, -0.05, 1.0));
@@ -325,7 +325,7 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
     //}
 }
 
-void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmittance, in Vector v, in AtmosphericData atmospheric, in float tracingEnd, bool hitSphere) {
+void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmittance, in Vector v, in float tracingEnd, bool hitSphere) {
     int steps = 12;
     float invsteps = 1.0 / float(steps);
 
@@ -414,7 +414,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
         vec3 Tr = (rayleigh_absorption + rayleigh_scattering) * Dr;
 
         float Dfog = exp(-height / Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Fog_Exponential_Fog_Bottom) * exp(-rayLength * Fog_Reduce_Density_Far) * Fog_Density;
-        float Dweather = exp(-height / Rain_Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Rain_Fog_Exponential_Fog_Bottom) * Rain_Fog_Density;
+        float Dweather = exp(-height / Rain_Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Rain_Fog_Exponential_Fog_Bottom) * exp(-rayLength * Rain_Fog_Reduce_Density_Far) * Rain_Fog_Density;
 
         vec3 Tfog = fog_scattering * mix(Dfog * timeFog, Dweather, rainStrength);
 
@@ -486,7 +486,7 @@ void main() {
 
     vec3 scattering = vec3(0.0);
     vec3 transmittance = vec3(1.0);
-    LandAtmosphericScattering(scattering, transmittance, v0, atmospheric, envLength, m.maskSky > 0.5);
+    LandAtmosphericScattering(scattering, transmittance, v0, envLength, m.maskSky > 0.5);
 
     scattering = cloudsScattering * transmittance + scattering;
 

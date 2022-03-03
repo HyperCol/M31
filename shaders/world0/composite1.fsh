@@ -17,6 +17,8 @@ const bool colortex12Clear = false;
 #include "/libs/common.glsl"
 #include "/libs/uniform.glsl"
 
+const vec2[4] jitter2x2 = vec2[4](vec2(0.0, 0.0), vec2(0.0, 1.0), vec2(1.0, 1.0), vec2(1.0, 0.0));
+
 void main() {
     float depth = texture(depthtex0, texcoord).x;
     float linearDepth = ExpToLinerDepth(depth);
@@ -120,7 +122,11 @@ void main() {
 
     float weight = 1.0 - min(1.0, abs(ExpToLinerDepth(previousCloudsDepth) - linearCloudsDepth) / linearCloudsDepth * 1.0);
 
-    float blend = 0.85 * InScreen * weight;
+    vec2 jitterfragCoord = floor(texcoord * resolution) + round(jitter * resolution);
+    float update = min(mod(jitterfragCoord.x, 2.0), mod(jitterfragCoord.y, 2.0));
+          update = mix(update, 1.0, 0.7);
+
+    float blend = 0.98 * InScreen * weight * update;
 
     vec4 result = mix(vec4(scattering, alpha), previousSample, vec4(blend));
     //vec4 result = vec4(scattering, alpha);
