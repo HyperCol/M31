@@ -47,8 +47,8 @@ void CalculatePlanetSurface(inout vec3 color, in vec3 LightColor0, in vec3 Light
     float stepLength = min(40000.0, sqrt(pow2(t) + pow2(h)));
     vec3 transmittance = pow(exp(-stepLength * (Tr + Tm) * 0.25), vec3(0.8)) * stepLength;
 
-    color = LightColor0 * transmittance * (phaseMie.x * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
-    color += LightColor1 * transmittance * (phaseMie.y * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
+    color = LightColor0 * transmittance * (phaseMie.x * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering) * invPi;
+    color += LightColor1 * transmittance * (phaseMie.y * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering) * invPi;
 }
 
 float ComputeAO(in vec3 P, in vec3 N, in vec3 S) {

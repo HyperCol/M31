@@ -1031,7 +1031,8 @@ void main() {
 
     //CalculateClouds(color, v1, withCloudsDepth, m.maskSky > 0.5);
 
-    color = color / (color + 1.0);
+    //color = color / (color + 1.0);
+    color = color * MappingToSDR;
     color = GammaToLinear(color);
 
     gl_FragData[0] = vec4(color, 1.0);

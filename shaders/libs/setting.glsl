@@ -21,9 +21,9 @@
 #define Custom 1
 
 //Lighting Setting
-#define Sun_Light_Luminance 6.0
+#define Sun_Light_Luminance 4.0
 #define Moon_Light_Luminance 0.5
-#define Blocks_Light_Luminance 0.2
+#define Blocks_Light_Luminance 1.0
 #define Nature_Light_Min_Luminance 0.1
 
 //Blocks Light
@@ -58,6 +58,8 @@
 #define Small_HoneyBlock_Density 8.0                //[0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0]
 
 #define Translucent_Blocks_Quality High             //[Low High]
+
+#define Screen_Space_Reflection Medium              //[Medium High Ultra]
 
 //Atmosphere
 #define Altitude_Scale 1.0                          //[1.0 10.0 25.0 50.0 75.0 100.0 250.0 500.0 750.0 1000.0]
