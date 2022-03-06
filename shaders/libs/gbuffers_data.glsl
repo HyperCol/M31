@@ -94,7 +94,7 @@ Gbuffers GetGbuffersData(in vec2 coord) {
 
     m.maskWater = MaskCheck(m.tile_mask, Water);
 
-    m.smoothness    = tex0_b.r;
+    m.smoothness    = clamp(tex0_b.r, 1e-5, 1.0 - 1e-5);
     m.metallic      = tex0_b.g;
     m.F0            = mix(vec3(m.metallic), m.albedo, step(0.9, m.metallic));
     m.roughness     = pow2(1.0 - m.smoothness);
