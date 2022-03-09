@@ -42,9 +42,9 @@ uniform vec3 cameraPosition;
 uniform ivec2 atlasSize;
 
 #if defined(MC_VERSION)
-uniform vec3 lightVectorWorld;
+uniform vec3 worldLightVector;
 #else
-vec3 lightVectorWorld = normalize(mat3(gbufferModelViewInverse) * shadowLightPosition);
+vec3 worldLightVector = normalize(mat3(gbufferModelViewInverse) * shadowLightPosition);
 #endif
 
 #define Enabled_Door_Parallax_Fix
@@ -99,7 +99,7 @@ void main() {
     #endif
 
     vec3 rotate = vec3(r0.x, r1.y, r2.z);
-    lightDirection = mat3(gbufferModelView) * (lightVectorWorld * rotate);
+    lightDirection = mat3(gbufferModelView) * (worldLightVector * rotate);
     
     for(int i = 0; i < 3; i++) {
         gl_Position = vertexPosition[i];

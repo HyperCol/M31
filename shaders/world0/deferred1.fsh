@@ -179,7 +179,7 @@ void main() {
 
     float simplesss = m.fullBlock < 0.5 && m.material > 65.0 ? 1.0 : 0.0;
 
-    float contactShadow = ScreenSpaceContactShadow(m, v0, lightVector, simplesss);
+    float contactShadow = ScreenSpaceContactShadow(m, v0, lightVector, simplesss) * m.selfShadow;
 
     vec3 shading = CalculateShading(vec3(texcoord, v0.depth), lightVector, m.geometryNormal, simplesss * 2.0);
          shading *= contactShadow;

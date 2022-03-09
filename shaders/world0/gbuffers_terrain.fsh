@@ -4,6 +4,8 @@ uniform sampler2D tex;
 uniform sampler2D normals;
 uniform sampler2D specular;
 
+uniform vec3 shadowLightPosition;
+
 uniform ivec2 atlasSize;
 
 in float tileMask;
@@ -70,9 +72,9 @@ vec2 ParallaxMapping(in vec2 coord, in vec3 direction){
     #if Parallax_Mapping_Quality < High
     int steps = 16;
     #elif Parallax_Mapping_Quality > High
-    int steps = 32;
+    int steps = 64;
     #else
-    int steps = 24;
+    int steps = 32;
     #endif
 
     float invsteps = 1.0 / float(steps);
@@ -109,15 +111,77 @@ vec2 ParallaxMapping(in vec2 coord, in vec3 direction){
     return parallaxCoord;
 }
 
+float ParallaxSelfShadow(in vec2 coord, in vec3 direction) {
+    #if Parallax_Self_Shadow_Quality < High
+    int steps = 16;
+    #elif Parallax_Self_Shadow_Quality > High
+    int steps = 32;
+    #else
+    int steps = 24;
+    #endif
+
+    float invsteps = 1.0 / float(steps);
+
+    vec2 fAtlasSize = vec2(atlasSize);
+
+    #ifdef Auto_Detect_Tile_Resolution
+    float textureTileSize = round(TileResolution);
+    #else
+    float textureTileSize = Texture_Tile_Resolution;
+    #endif    
+    vec2 tileSize = textureTileSize / fAtlasSize;
+
+    vec2 parallaxCoord = coord;
+
+    #ifdef Parallax_Self_Shadow_Pixel
+    parallaxCoord = floor(parallaxCoord * fAtlasSize) / fAtlasSize;
+    #endif
+
+    float height = GetHeightMap(parallaxCoord) + Parallax_Self_Shadow_Diffcent;
+    if(height >= 0.0 || min(fAtlasSize.x, fAtlasSize.y) < 1.0) return 1.0;
+
+    vec2 parallaxDelta = direction.xy * tileSize;
+         parallaxDelta = parallaxDelta * invsteps * Parallax_Self_Shadow_Length;
+
+    float shading = 1.0;
+
+    for(int i = 0; i < steps; i++) {
+        parallaxCoord = OffsetCoord(parallaxCoord, parallaxDelta, tileSize);
+
+        #ifdef Parallax_Self_Shadow_Pixel
+        float heightSample = GetHeightMap(floor(parallaxCoord * fAtlasSize) / fAtlasSize);
+        #else
+        float heightSample = GetHeightMap(parallaxCoord);
+        #endif
+
+        if(heightSample > height) {
+            shading = 0.0;
+            break;
+        }
+    }
+
+    shading = mix(shading, 1.0, saturate(mipmap_level - 4.0 + 1.0));
+
+    return shading;
+}
+
 void main() {
     vec2 coord = texcoord;
 
     mat3 tbn = mat3(tangent, binormal, normal);
-    vec3 parallaxDirection = normalize(normalize(viewDirection) * tbn);
+    vec3 parallaxDirection = normalize(viewDirection * tbn);
+    vec3 selfShadowDirection = normalize(lightDirection * tbn);
 
     #ifdef Parallax_Mapping
     if(mipmap_level < 2.0)
     coord = ParallaxMapping(coord, parallaxDirection);
+    #endif
+
+    float selfShadow = 1.0;
+
+    #ifdef Parallax_Self_Shadow
+    if(mipmap_level < 4.0)
+    selfShadow = ParallaxSelfShadow(coord, selfShadowDirection);
     #endif
 
     vec4 baseColor = GetTextureLod(tex, coord);
@@ -162,7 +226,7 @@ void main() {
 
     //Misc: heightmap self_shadow
     gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(texture3.rg), albedo.a);
-    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(material / 255.0, max(Land, round(tileMask)) / 255.0), pack2x8(emissive, texture2.b), 1.0 - FullSolidBlock);
+    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(material / 255.0, max(Land, round(tileMask)) / 255.0), pack2x8(emissive, selfShadow), 1.0 - FullSolidBlock);
     gl_FragData[2] = vec4(EncodeSpheremap(texturedNormal), EncodeSpheremap(normal));
 }
 /* DRAWBUFFERS:012 */
