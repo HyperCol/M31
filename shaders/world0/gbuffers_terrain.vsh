@@ -1,8 +1,8 @@
 #version 130
 
+in vec2 mc_midTexCoord;
 in vec3 mc_Entity;
 in vec4 at_tangent;
-in vec3 at_midBlock;
 
 #define GSH
 
@@ -51,7 +51,7 @@ void main() {
 
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
     lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
-    midcoord = at_midBlock.xy;
+    midcoord = mc_midTexCoord.xy;
 
     tileMask = mc_Entity.x;
 

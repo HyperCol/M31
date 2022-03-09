@@ -54,6 +54,13 @@
 #define Sky_Light_Level_Min 0                       //[0 1 2 3 4 5 6 7 8 9 10 11 12 13 14]
 
 //Materials
+#define Parallax_Mapping
+#define Parallax_Mapping_Quality Medium             //[Medium High Ultra]
+#define Parallax_Mapping_Distance 32.0              //
+#define Mipmaps_Levels 2.0                          //[1.0 2.0 3.0 4.0]
+#define Texture_Tile_Resolution 16.0                //[1.0 2.0 4.0 8.0 16.0 32.0 64.0 128.0 256.0 512.0 1024.0 2048.0 4096.0 8192.0]
+#define Auto_Detect_Tile_Resolution
+
 #define Small_SlimeBlock_Density 8.0                //[0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0]
 #define Small_HoneyBlock_Density 8.0                //[0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0]
 

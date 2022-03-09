@@ -17,23 +17,115 @@ in vec3 normal;
 in vec3 tangent;
 in vec3 binormal;
 
+in vec3 viewDirection;
+in vec3 lightDirection;
+
 in vec4 color;
 
 #define Alpha_Test_Reference 0.2
 
+#include "/libs/setting.glsl"
 #include "/libs/uniform.glsl"
 #include "/libs/common.glsl"
 #include "/libs/mask_check.glsl"
 
-void main() {
-    vec4 baseColor = texture(tex, texcoord);
-    vec4 albedo = baseColor * color;
-    vec4 texture2 = texture(normals, texcoord);
-    vec4 texture3 = texture(specular, texcoord);
+vec2 dx = dFdx(texcoord * vec2(atlasSize));
+vec2 dy = dFdy(texcoord * vec2(atlasSize));
+float mipmap_level = log2(max(dot(dx, dx), dot(dy, dy))) * 0.25 * Mipmaps_Levels;
 
-    float emissive = textureLod(specular, texcoord, 0).a;
+vec4 GetTextureLod(in sampler2D sampler, in vec2 coord) {
+    #ifdef Parallax_Mapping
+    return textureLod(sampler, coord, mipmap_level);
+    #else
+    return texture(sampler, coord);
+    #endif
+}
+
+float GetHeightMap(in vec2 coord) {
+    return GetTextureLod(normals, coord).a - 1.0;
+}
+
+vec2 OffsetCoord(in vec2 coord, in vec2 offset, in vec2 size){
+	vec2 offsetCoord = coord + mod(offset.xy, size);
+
+	vec2 minCoord = vec2(coord.x - mod(coord.x, size.x), coord.y - mod(coord.y, size.y));
+	vec2 maxCoord = minCoord + size;
+
+    if(offsetCoord.x < minCoord.x){
+        offsetCoord.x += size.x;
+    }else if(maxCoord.x < offsetCoord.x){
+        offsetCoord.x -= size.x;
+    }
+
+    if(offsetCoord.y < minCoord.y){
+        offsetCoord.y += size.y;
+    }else if(maxCoord.y < offsetCoord.y){
+        offsetCoord.y -= size.y;
+    }
+
+	return offsetCoord;
+}
+
+vec2 ParallaxMapping(in vec2 coord, in vec3 direction){
+    #if Parallax_Mapping_Quality < High
+    int steps = 16;
+    #elif Parallax_Mapping_Quality > High
+    int steps = 32;
+    #else
+    int steps = 24;
+    #endif
+
+    float invsteps = 1.0 / float(steps);
+
+    vec2 fAtlasSize = vec2(atlasSize);
+
+    if(GetHeightMap(coord) >= 0.0 || min(fAtlasSize.x, fAtlasSize.y) < 1.0) return coord;
+
+    vec2 tileSize = 1.0 / fAtlasSize;
+    #ifdef Auto_Detect_Tile_Resolution
+         tileSize *= round(TileResolution);
+    #else
+         tileSize *= Texture_Tile_Resolution;
+    #endif
+
+    vec2 parallaxDelta = direction.xy * tileSize / direction.z;
+         parallaxDelta = parallaxDelta * invsteps * 0.25;
+         parallaxDelta = -parallaxDelta;
+
+    vec2 parallaxCoord = coord;
+
+    float parallaxDepth = 0.0;
+    float prevDepth = 0.0;
+
+    for(int i = 0; i < steps; i++) {
+        parallaxDepth -= invsteps;
+
+        float height = GetHeightMap(parallaxCoord);
+        if(parallaxDepth < height) break;
+
+        parallaxCoord = OffsetCoord(parallaxCoord, parallaxDelta, tileSize);
+    }
+
+    return parallaxCoord;
+}
+
+void main() {
+    vec2 coord = texcoord;
 
     mat3 tbn = mat3(tangent, binormal, normal);
+    vec3 parallaxDirection = normalize(normalize(viewDirection) * tbn);
+
+    #ifdef Parallax_Mapping
+    if(mipmap_level < 2.0)
+    coord = ParallaxMapping(coord, parallaxDirection);
+    #endif
+
+    vec4 baseColor = GetTextureLod(tex, coord);
+    vec4 albedo = baseColor * color;
+    vec4 texture2 = GetTextureLod(normals, coord);
+    vec4 texture3 = GetTextureLod(specular, coord);
+
+    float emissive = textureLod(specular, coord, 0).a;
 
     vec2 normalTexture = texture2.xy * 2.0 - 1.0;
 
