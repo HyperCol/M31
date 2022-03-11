@@ -68,7 +68,7 @@ vec2 OffsetCoord(in vec2 coord, in vec2 offset, in vec2 size){
 	return offsetCoord;
 }
 
-vec2 ParallaxMapping(in vec2 coord, in vec3 direction){
+vec2 ParallaxMapping(in vec2 coord, in vec3 direction, inout float depth){
     #if Parallax_Mapping_Quality < High
     int steps = 16;
     #elif Parallax_Mapping_Quality > High
@@ -97,7 +97,6 @@ vec2 ParallaxMapping(in vec2 coord, in vec3 direction){
     vec2 parallaxCoord = coord;
 
     float parallaxDepth = 0.0;
-    float prevDepth = 0.0;
 
     for(int i = 0; i < steps; i++) {
         parallaxDepth -= invsteps;
@@ -108,16 +107,18 @@ vec2 ParallaxMapping(in vec2 coord, in vec3 direction){
         parallaxCoord = OffsetCoord(parallaxCoord, parallaxDelta, tileSize);
     }
 
+    depth = parallaxDepth * 0.25;
+
     return parallaxCoord;
 }
 
 float ParallaxSelfShadow(in vec2 coord, in vec3 direction) {
     #if Parallax_Self_Shadow_Quality < High
-    int steps = 16;
+    int steps = 8;
     #elif Parallax_Self_Shadow_Quality > High
     int steps = 32;
     #else
-    int steps = 24;
+    int steps = 16;
     #endif
 
     float invsteps = 1.0 / float(steps);
@@ -160,7 +161,7 @@ float ParallaxSelfShadow(in vec2 coord, in vec3 direction) {
         }
     }
 
-    shading = mix(shading, 1.0, saturate(mipmap_level - 4.0 + 1.0));
+    shading = mix(shading, 1.0, saturate(mipmap_level - 3.0 + 1.0));
 
     return shading;
 }
@@ -172,15 +173,17 @@ void main() {
     vec3 parallaxDirection = normalize(viewDirection * tbn);
     vec3 selfShadowDirection = normalize(lightDirection * tbn);
 
+    float parallaxDepth = 0.0;
+
     #ifdef Parallax_Mapping
     if(mipmap_level < 2.0)
-    coord = ParallaxMapping(coord, parallaxDirection);
+    coord = ParallaxMapping(coord, parallaxDirection, parallaxDepth);
     #endif
 
     float selfShadow = 1.0;
 
     #ifdef Parallax_Self_Shadow
-    if(mipmap_level < 4.0)
+    if(mipmap_level < 3.0)
     selfShadow = ParallaxSelfShadow(coord, selfShadowDirection);
     #endif
 
@@ -196,6 +199,13 @@ void main() {
     vec3 texturedNormal = vec3(normalTexture * 1.0, sqrt(1.0 - dot(normalTexture.xy, normalTexture.xy)));
          texturedNormal = normalize(tbn * normalize(texturedNormal));
     if(maxComponent(texture2.rgb) == 0.0) texturedNormal = normal;
+
+    vec3 n = normal;
+
+    if(!gl_FrontFacing) {
+        n = -n;
+        texturedNormal = -texturedNormal;
+    }
 
     float TileMask = round(tileMask);
 
@@ -222,11 +232,14 @@ void main() {
 
     material = min(material, 255.0);
 
+    vec2 lightmap = lmcoord;
+         lightmap = clamp(lightmap - (-parallaxDepth), vec2(0.0), vec2(1.0));
+
     //if(albedo.a < Alpha_Test_Reference) discard;
 
     //Misc: heightmap self_shadow
     gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(texture3.rg), albedo.a);
-    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(material / 255.0, max(Land, round(tileMask)) / 255.0), pack2x8(emissive, selfShadow), 1.0 - FullSolidBlock);
-    gl_FragData[2] = vec4(EncodeSpheremap(texturedNormal), EncodeSpheremap(normal));
+    gl_FragData[1] = vec4(pack2x8(lightmap), pack2x8(material / 255.0, max(Land, round(tileMask)) / 255.0), pack2x8(emissive, selfShadow), 1.0 - FullSolidBlock);
+    gl_FragData[2] = vec4(EncodeSpheremap(texturedNormal), EncodeSpheremap(n));
 }
 /* DRAWBUFFERS:012 */

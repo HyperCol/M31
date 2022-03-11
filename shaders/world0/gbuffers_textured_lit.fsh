@@ -36,7 +36,7 @@ void main() {
     gl_FragData[0] = vec4(pack2x8(albedo.rg), pack2x8(albedo.b, albedo.a), pack2x8(texture3.rg), 1.0);
 
     //R : light map
-    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(texture3.b, (Mask_ID_Particles) / 255.0), pack2x8(emissive, texture2.b), 1.0);
+    gl_FragData[1] = vec4(pack2x8(lmcoord), pack2x8(texture3.b, (Mask_ID_Particles) / 255.0), pack2x8(emissive, 1.0), 1.0);
 
     //R : textured normal
     //G : textured normal
