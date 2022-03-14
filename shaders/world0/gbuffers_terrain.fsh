@@ -112,7 +112,7 @@ vec2 ParallaxMapping(in vec2 coord, in vec3 direction, inout float depth){
     return parallaxCoord;
 }
 
-float ParallaxSelfShadow(in vec2 coord, in vec3 direction) {
+float ParallaxSelfShadow(in vec2 coord, in vec3 direction, in float depth) {
     #if Parallax_Self_Shadow_Quality < High
     int steps = 8;
     #elif Parallax_Self_Shadow_Quality > High
@@ -184,7 +184,7 @@ void main() {
 
     #ifdef Parallax_Self_Shadow
     if(mipmap_level < 3.0)
-    selfShadow = ParallaxSelfShadow(coord, selfShadowDirection);
+    selfShadow = ParallaxSelfShadow(coord, selfShadowDirection, parallaxDepth);
     #endif
 
     vec4 baseColor = GetTextureLod(tex, coord);

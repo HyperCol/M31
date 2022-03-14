@@ -1007,7 +1007,7 @@ void main() {
         vec3 scattering = texture(colortex9, coord).rgb;
 
         #ifdef Reduce_Fog_Indoor_Density
-            float indoorDensity = max(float(eyeBrightness.y) / 240.0, m.lightmap.y);
+            float indoorDensity = max(m.maskSky, max(float(eyeBrightness.y) / 240.0, m.lightmap.y));
             
             transmittance = mix(vec3(1.0), transmittance, vec3(indoorDensity));
             scattering = mix(vec3(0.0), scattering, vec3(indoorDensity));
@@ -1037,10 +1037,6 @@ void main() {
 
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(withCloudsDepth, vec3(0.0));
-    //gl_FragData[2] = vec4(transmittance, 1.0);
-    //gl_FragData[3] = vec4(scattering, mix(v0.depth, texture(colortex11, previousCoord).a, blend));
 }
 /* DRAWBUFFERS:34 */
 /* RENDERTARGETS: 3,4 */
-///* DRAWBUFFERS:34AB */
-///* RENDERTARGETS: 3,4,10,11 */
