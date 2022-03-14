@@ -24,7 +24,6 @@ float VisibilityTerm(float cosTheta1, float cosTheta2, float roughness){
 
 vec4 ImportanceSampleGGX(in vec2 E, in float roughness){
     E.y = mix(E.y, 0.0, 0.7);
-    roughness = clamp(roughness, 1e-5, 1.0 - 1e-5);
 
     float Phi = E.x * 2.0 * Pi;
     float CosTheta = sqrt((1.0 - E.y) / ( 1.0 + (roughness - 1.0) * E.y));

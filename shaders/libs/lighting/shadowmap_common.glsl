@@ -2,6 +2,8 @@
 
 #define Shadow_Depth_Mul 0.2
 
+const vec2 shadowMapScale = vec2(1.0, 0.5);
+
 const int   shadowMapResolution = 2048;
 const float shadowDistance      = 128.0;
 
@@ -43,7 +45,7 @@ vec3 ConvertToShadowCoord(in vec3 p) {
 }
 
 vec3 RemapShadowCoord(in vec3 coord) {
-    return vec3(coord.xy, coord.z * Shadow_Depth_Mul);
+    return vec3((coord.xy * 0.5 + 0.5) * shadowMapScale * 2.0 - 1.0, coord.z * Shadow_Depth_Mul);
 }
 
 vec3 WorldPositionToShadowCoord(in vec3 p) {
