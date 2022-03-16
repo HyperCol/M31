@@ -175,10 +175,13 @@ void main() {
 
     float parallaxDepth = 0.0;
 
-    #ifdef Parallax_Mapping
-    if(mipmap_level < 2.0)
-    coord = ParallaxMapping(coord, parallaxDirection, parallaxDepth);
-    #endif
+    if(mipmap_level < 1.0) {
+        #ifdef Parallax_Mapping
+        coord = ParallaxMapping(coord, parallaxDirection, parallaxDepth);
+        #endif
+    } else {
+        parallaxDepth = GetHeightMap(coord) * 0.25;
+    }
 
     float selfShadow = 1.0;
 
@@ -233,7 +236,31 @@ void main() {
     material = min(material, 255.0);
 
     vec2 lightmap = lmcoord;
-         lightmap = clamp(lightmap - (-parallaxDepth), vec2(0.0), vec2(1.0));
+
+    vec2 fAtlasSize = vec2(atlasSize);
+    vec2 invAtlaSize = 1.0 / fAtlasSize;
+
+    vec2 tileSize = 1.0 / fAtlasSize;
+    #ifdef Auto_Detect_Tile_Resolution
+         tileSize *= round(TileResolution);
+    #else
+         tileSize *= Texture_Tile_Resolution;
+    #endif
+
+    float occlusion = 0.0;
+
+    if(max(fAtlasSize.x, fAtlasSize.y) > 1.0) {
+        #ifdef Auto_Detect_Tile_Resolution
+        vec3 offset = vec3(invAtlaSize, 0.0);
+        #else
+        vec3 offset = vec3(invAtlaSize, 0.0);
+        #endif
+
+        occlusion = (textureLod(tex, OffsetCoord(coord, offset.xz, tileSize), 0).a + textureLod(tex, OffsetCoord(coord, -offset.xz, tileSize), 0).a + textureLod(tex, OffsetCoord(coord, offset.zy, tileSize), 0).a + textureLod(tex, OffsetCoord(coord, -offset.zy, tileSize), 0).a) / 4.0;
+        occlusion = saturate(rescale(occlusion, 0.5, 1.0));
+
+        lightmap = clamp(lightmap - (-parallaxDepth) * occlusion, vec2(0.0), vec2(1.0));
+    }
 
     //if(albedo.a < Alpha_Test_Reference) discard;
 
