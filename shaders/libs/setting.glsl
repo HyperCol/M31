@@ -63,6 +63,7 @@
 #define Parallax_Self_Shadow
 #define Parallax_Self_Shadow_Quality Medium         //[Medium High Ultra]
 #define Parallax_Self_Shadow_Pixel
+#define Pixel_Shadow_Resolution 1.0                 //[1.0 2.0 4.0 8.0]
 #define Parallax_Self_Shadow_Length 0.1             //[0.02 0.04 0.06 0.08 0.1 0.12 0.14 0.16 0.18 0.2]
 #define Parallax_Self_Shadow_Diffcent 0.04          //[0.005 0.01 0.02 0.04 0.06 0.08 0.1 0.12]
 

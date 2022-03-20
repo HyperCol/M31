@@ -44,7 +44,11 @@ vec4 GetTextureLod(in sampler2D sampler, in vec2 coord) {
 }
 
 float GetHeightMap(in vec2 coord) {
-    return GetTextureLod(normals, coord).a - 1.0;
+    return (GetTextureLod(normals, coord).a - 1.0) * 0.25;
+}
+
+float GetHeightMapTexture(in vec2 coord) {
+    return (GetTextureLod(tex, coord).a - 1.0) * 0.25;
 }
 
 vec2 OffsetCoord(in vec2 coord, in vec2 offset, in vec2 size){
@@ -90,8 +94,10 @@ vec2 ParallaxMapping(in vec2 coord, in vec3 direction, inout float depth){
          tileSize *= Texture_Tile_Resolution;
     #endif
 
+    float stepLength = 0.25 * invsteps;
+
     vec2 parallaxDelta = direction.xy * tileSize / direction.z;
-         parallaxDelta = parallaxDelta * invsteps * 0.25;
+         parallaxDelta = parallaxDelta * stepLength;
          parallaxDelta = -parallaxDelta;
 
     vec2 parallaxCoord = coord;
@@ -99,7 +105,7 @@ vec2 ParallaxMapping(in vec2 coord, in vec3 direction, inout float depth){
     float parallaxDepth = 0.0;
 
     for(int i = 0; i < steps; i++) {
-        parallaxDepth -= invsteps;
+        parallaxDepth -= stepLength;
 
         float height = GetHeightMap(parallaxCoord);
         if(parallaxDepth < height) break;
@@ -107,7 +113,7 @@ vec2 ParallaxMapping(in vec2 coord, in vec3 direction, inout float depth){
         parallaxCoord = OffsetCoord(parallaxCoord, parallaxDelta, tileSize);
     }
 
-    depth = parallaxDepth * 0.25;
+    depth = (parallaxDepth + stepLength);
 
     return parallaxCoord;
 }
@@ -124,6 +130,7 @@ float ParallaxSelfShadow(in vec2 coord, in vec3 direction, in float depth) {
     float invsteps = 1.0 / float(steps);
 
     vec2 fAtlasSize = vec2(atlasSize);
+    vec2 shadowAtlasSize = Pixel_Shadow_Resolution * fAtlasSize;
 
     #ifdef Auto_Detect_Tile_Resolution
     float textureTileSize = round(TileResolution);
@@ -135,14 +142,16 @@ float ParallaxSelfShadow(in vec2 coord, in vec3 direction, in float depth) {
     vec2 parallaxCoord = coord;
 
     #ifdef Parallax_Self_Shadow_Pixel
-    parallaxCoord = floor(parallaxCoord * fAtlasSize) / fAtlasSize;
+    parallaxCoord = floor(parallaxCoord * shadowAtlasSize) / shadowAtlasSize;
     #endif
 
-    float height = GetHeightMap(parallaxCoord) + Parallax_Self_Shadow_Diffcent;
+    float height = GetHeightMap(parallaxCoord) / 0.25 + Parallax_Self_Shadow_Diffcent;
     if(height >= 0.0 || min(fAtlasSize.x, fAtlasSize.y) < 1.0) return 1.0;
 
+    float stepLength = invsteps;
+
     vec2 parallaxDelta = direction.xy * tileSize;
-         parallaxDelta = parallaxDelta * invsteps * Parallax_Self_Shadow_Length;
+         parallaxDelta = parallaxDelta * stepLength * Parallax_Self_Shadow_Length;
 
     float shading = 1.0;
 
@@ -150,9 +159,9 @@ float ParallaxSelfShadow(in vec2 coord, in vec3 direction, in float depth) {
         parallaxCoord = OffsetCoord(parallaxCoord, parallaxDelta, tileSize);
 
         #ifdef Parallax_Self_Shadow_Pixel
-        float heightSample = GetHeightMap(floor(parallaxCoord * fAtlasSize) / fAtlasSize);
+        float heightSample = GetHeightMap(floor(parallaxCoord * shadowAtlasSize) / shadowAtlasSize) / 0.25;
         #else
-        float heightSample = GetHeightMap(parallaxCoord);
+        float heightSample = GetHeightMap(parallaxCoord) / 0.25;
         #endif
 
         if(heightSample > height) {
@@ -166,8 +175,41 @@ float ParallaxSelfShadow(in vec2 coord, in vec3 direction, in float depth) {
     return shading;
 }
 
+vec3 normalFromHeight(in vec2 coord, float stepSize, in vec2 tileSize) {
+    vec2 e = vec2(stepSize, 0);
+
+    float px1 = GetHeightMap(OffsetCoord(coord, -e.xy * tileSize, tileSize));
+    float px2 = GetHeightMap(OffsetCoord(coord,  e.xy * tileSize, tileSize));
+    float py1 = GetHeightMap(OffsetCoord(coord, -e.yx * tileSize, tileSize));
+    float py2 = GetHeightMap(OffsetCoord(coord,  e.yx * tileSize, tileSize));
+    
+    return vec3(px1 - px2, py1 - py2, stepSize);
+}
+
+vec3 normalFromtexture(in vec2 coord, float stepSize, in vec2 tileSize) {
+    vec2 e = vec2(stepSize, 0);
+
+    float px1 = GetHeightMapTexture(OffsetCoord(coord, -e.xy * tileSize, tileSize));
+    float px2 = GetHeightMapTexture(OffsetCoord(coord,  e.xy * tileSize, tileSize));
+    float py1 = GetHeightMapTexture(OffsetCoord(coord, -e.yx * tileSize, tileSize));
+    float py2 = GetHeightMapTexture(OffsetCoord(coord,  e.yx * tileSize, tileSize));
+    
+    return vec3(px1 - px2, py1 - py2, stepSize);
+}
+
 void main() {
     vec2 coord = texcoord;
+
+    vec2 fAtlasSize = vec2(atlasSize);
+    vec2 invAtlaSize = 1.0 / fAtlasSize;
+
+    #ifdef Auto_Detect_Tile_Resolution
+    float tileResolution = round(TileResolution);
+    #else
+    float tileResolution = Texture_Tile_Resolution;
+    #endif
+
+    vec2 tileSize = tileResolution / fAtlasSize;
 
     mat3 tbn = mat3(tangent, binormal, normal);
     vec3 parallaxDirection = normalize(viewDirection * tbn);
@@ -197,13 +239,31 @@ void main() {
 
     float emissive = textureLod(specular, coord, 0).a;
 
-    vec2 normalTexture = texture2.xy * 2.0 - 1.0;
-
-    vec3 texturedNormal = vec3(normalTexture * 1.0, sqrt(1.0 - dot(normalTexture.xy, normalTexture.xy)));
-         texturedNormal = normalize(tbn * normalize(texturedNormal));
-    if(maxComponent(texture2.rgb) == 0.0) texturedNormal = normal;
-
     vec3 n = normal;
+
+    if(parallaxDepth < GetHeightMap(coord)) {
+        #if Parallax_Mapping_Quality < High
+        int steps = 16;
+        #elif Parallax_Mapping_Quality > High
+        int steps = 64;
+        #else
+        int steps = 32;
+        #endif
+
+        vec3 fromTexture = normalFromHeight(coord, 1.0 / tileResolution, tileSize);
+        vec3 fromHeightmap = normalFromHeight(coord, 1.0 / tileResolution, tileSize);
+
+        n = normalize(tbn * fromTexture);
+
+        tbn = mat3(tangent, cross(tangent, n), n);
+    }
+
+    vec2 normalTexture = texture2.xy * 2.0 - 1.0;
+         normalTexture = clamp(normalTexture * 1.0, vec2(-1.0), vec2(1.0));
+
+    vec3 texturedNormal = vec3(normalTexture, sqrt(1.0 - dot(normalTexture.xy, normalTexture.xy)));
+         texturedNormal = normalize(tbn * texturedNormal);
+    if(maxComponent(texture2.rgb) == 0.0) texturedNormal = n;
 
     if(!gl_FrontFacing) {
         n = -n;
@@ -236,16 +296,6 @@ void main() {
     material = min(material, 255.0);
 
     vec2 lightmap = lmcoord;
-
-    vec2 fAtlasSize = vec2(atlasSize);
-    vec2 invAtlaSize = 1.0 / fAtlasSize;
-
-    vec2 tileSize = 1.0 / fAtlasSize;
-    #ifdef Auto_Detect_Tile_Resolution
-         tileSize *= round(TileResolution);
-    #else
-         tileSize *= Texture_Tile_Resolution;
-    #endif
 
     float occlusion = 0.0;
 
