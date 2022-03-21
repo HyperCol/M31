@@ -82,12 +82,14 @@ vec3 SpecularLighting(in Gbuffers m, in vec3 L, in vec3 E) {
     return specular;
 }
 
+#define Minimum_Angle 0.0
+
 vec3 SpecularLightingClamped(in Gbuffers m, in vec3 normal, in vec3 L, in vec3 E) {
     vec3 h = normalize(L + E);
 
-    float ndotv = abs(dot(normal, E));
-    float ndotl = abs(dot(normal, L));
-    float ndoth = abs(dot(normal, h));
+    float ndotv = max(dot(normal, E), Minimum_Angle);
+    float ndotl = max(dot(normal, L), Minimum_Angle);
+    float ndoth = max(dot(normal, h), Minimum_Angle);
     float hdotl = max(0.0, dot(L, h));
 
     vec3 f = SchlickFresnel(m.F0, hdotl);

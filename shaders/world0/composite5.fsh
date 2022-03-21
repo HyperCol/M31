@@ -2,9 +2,6 @@
 
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
-uniform sampler2D colortex6;
-
-const bool colortex6Clear = false;
 
 #include "/libs/setting.glsl"
 #include "/libs/common.glsl"
@@ -187,7 +184,7 @@ vec2 DualParaboloidMapping(in vec3 position) {
     return coord;
 }
 
-vec3 EnvironmentReflection(in vec3 L, in Gbuffers m) {
+vec3 EnvironmentReflection(in vec3 L, in Gbuffers m, inout float alpha) {
     vec2 coord = DualParaboloidMapping(L);
 
     float depth = texture(shadowtex0, coord).x;
@@ -205,6 +202,8 @@ vec3 EnvironmentReflection(in vec3 L, in Gbuffers m) {
         CalculatePlanetSurface(color, SunLightingColor, MoonLightingColor, worldSunVector, L, 1000.0, tracingPlanet.x - max(0.0, tracingAtmosphere.x));
         CalculateAtmosphericScattering(color, atmosphere_color, rayOrigin, L, worldSunVector, vec2(0.0));
         color += atmosphere_color;
+
+        alpha = 0.0;
     } else {
         vec3 albedo = LinearToGamma(texture(shadowcolor0, coord).rgb);
 
@@ -216,9 +215,9 @@ vec3 EnvironmentReflection(in vec3 L, in Gbuffers m) {
              shadowCoord.xyz = RemapShadowCoord(shadowCoord.xyz);
              shadowCoord = shadowCoord * 0.5 + 0.5;
 
-        float shading = step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x + 0.5 / 2048.0) * texture(shadowcolor1, coord).a;
+        float shading = step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x + 1.0 / 2048.0) * texture(shadowcolor1, coord).a;
         
-        vec3 SunLight = albedo * shading * SunLightingColor * invPi;
+        vec3 SunLight = albedo * shading * LightingColor * invPi;
 
         float SkyLighting0 = saturate(rescale(pow2(lightmap.y * lightmap.y), 0.7, 1.0));
         float SkyLighting1 = pow2(lightmap.y) * lightmap.y;
@@ -232,6 +231,8 @@ vec3 EnvironmentReflection(in vec3 L, in Gbuffers m) {
         vec3 torchLight = albedo * BlockLightingColor * invPi * (blockLight0 + blockLight1);
 
         color = SunLight + AmbientLight + torchLight;
+
+        alpha = 1.0;
     }
 
     return color;
@@ -249,8 +250,10 @@ void main() {
 
     vec3 visibleNormal = dot(v.eyeDirection, m.texturedNormal) > 0.2 ? m.texturedNormal : m.geometryNormal;
 
+    vec3 worldNormal = mat3(gbufferModelViewInverse) * m.geometryNormal;
+
     vec3 n = visibleNormal;
-    vec3 t = normalize(vec3(n.y - n.z, -n.x, n.x));
+    vec3 t = normalize(mat3(gbufferModelView) * cross(worldNormal, vec3(0.0, 1.0, 1.0)));
     vec3 b = cross(t, n);
     mat3 tbn = mat3(t, b, n);
 
@@ -259,7 +262,7 @@ void main() {
     vec3 normal = normalize(tbn * rayPDF.xyz);
 
     if(dot(normal, v.eyeDirection) < 0.0) normal = -normal;
-    if(m.smoothness > 0.95) normal = m.texturedNormal;
+    //if(m.smoothness > 0.95) normal = n;
 
     vec3 L = normalize(reflect(v.viewDirection, normal));
     vec3 eyeDirection = v.eyeDirection;
@@ -268,25 +271,25 @@ void main() {
     vec3 rayOrigin = v.vP;
          rayOrigin += m.geometryNormal * (1.0 - saturate(rescale(dot(v.eyeDirection, m.geometryNormal), 0.2, 1.0))) * 0.2;
 
-    //color = vec3(0.0);
-
-    vec3 fr = SpecularLightingClamped(m, m.texturedNormal, normalize(reflect(v.viewDirection, m.texturedNormal)), eyeDirection);
-
     vec3 reflection = vec3(0.0);
 
 if(m.maskSky < 0.5) {
     vec2 coord = ScreenSpaceRayMarching(rayOrigin, L, n);
     bool hit = coord.x > 0.0 && coord.y > 0.0;
+    float alpha = 0.0;
 
     if(hit) {
         reflection = LinearToGamma(texture(colortex3, coord).rgb) * MappingToHDR;
+        if(texture(depthtex0, coord).x < 0.99999) alpha = 1.0;
     } else {
         vec3 worldLightDirection = mat3(gbufferModelViewInverse) * L;
 
-        reflection = EnvironmentReflection(worldLightDirection, m);
+        reflection = EnvironmentReflection(worldLightDirection, m, alpha);
     }
 
-    //reflection = mix(reflection, texture(colortex6, texcoord).rgb, 0.95);
+    if(m.metal > 0.5) color *= 1.0 - alpha;
+
+    vec3 fr = SpecularLightingClamped(m, visibleNormal, normalize(reflect(v.viewDirection, visibleNormal)), eyeDirection);
 
     //color = vec3(0.0);
     //fr = vec3(1.0);
@@ -298,6 +301,5 @@ if(m.maskSky < 0.5) {
     color = GammaToLinear(color);
 
     gl_FragData[0] = vec4(color, 1.0);
-    gl_FragData[1] = vec4(reflection, 1.0);
 }
-/* DRAWBUFFERS:36 */
+/* DRAWBUFFERS:3 */
