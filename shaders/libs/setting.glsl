@@ -42,12 +42,12 @@
 #define Enabled_Screen_Space_Contact_Shadow         //
 
 //Ambient Light
-#define SSAO_Quality Medium                         //[OFF Medium] HBAO quality
-    #define SSAO_Falloff 0.7                        //
+#define SSAO_Quality OFF                            //[OFF Medium High] HBAO quality
+    #define SSAO_Falloff 0.5                        //
     #define SSAO_Bias 0.0                           //
-    #define SSAO_Direction_Step 4                   //
-    #define SSAO_Rotation_Step 8                    //
-    #define SSAO_Radius 0.3                         //
+    #define SSAO_Direction_Step 12                  //
+    #define SSAO_Rotation_Step 4                    //
+    #define SSAO_Radius 0.8                         //
     #define SSAO_Low_Resolution                     //half resolution render ssao
 
 //#define Disabled_Sky_Occlusion
@@ -63,7 +63,7 @@
 #define Parallax_Self_Shadow
 #define Parallax_Self_Shadow_Quality Medium         //[Medium High Ultra]
 #define Parallax_Self_Shadow_Pixel
-#define Pixel_Shadow_Resolution 1.0                 //[1.0 2.0 4.0 8.0]
+#define Pixel_Shadow_Resolution 2.0                 //[1.0 2.0 4.0 8.0]
 #define Parallax_Self_Shadow_Length 0.1             //[0.02 0.04 0.06 0.08 0.1 0.12 0.14 0.16 0.18 0.2]
 #define Parallax_Self_Shadow_Diffcent 0.04          //[0.005 0.01 0.02 0.04 0.06 0.08 0.1 0.12]
 

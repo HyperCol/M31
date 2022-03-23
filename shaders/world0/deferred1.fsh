@@ -62,43 +62,64 @@ float ComputeAO(in vec3 P, in vec3 N, in vec3 S) {
     return saturate(ndotv - SSAO_Bias) * saturate(falloff);
 }
 
+float GetAO(in vec2 coord) {
+    return texture(colortex3, coord).a;
+}
+
 float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
-    #if SSAO_Quality == OFF
+#if SSAO_Quality == OFF
     return 1.0;
-    #else
-    int steps = SSAO_Rotation_Step;
-    float invsteps = 1.0 / float(steps);
-
-    int rounds = SSAO_Direction_Step;
-
-    if(m.maskHand > 0.9) return 1.0;
+#else
+    vec2 coord = texcoord * 0.5;
 
     float ao = 0.0;
+    float totalWeight = 0.0;
 
-    float radius = SSAO_Radius / (float(rounds) * v.viewLength);
+    vec3 closest = vec3(0.0, 0.0, 1000.0);
 
-    float dither = 0.5;//R2Dither(ApplyTAAJitter(texcoord) * resolution);
+    for(float i = -1.0; i <= 1.0; i += 1.0) {
+        for(float j = -1.0; j <= 1.0; j += 1.0) {
+            vec2 offset = vec2(i, j) * texelSize;
+            vec2 offsetCoord = coord + offset;
 
-    for(int j = 0; j < rounds; j++){
-        for(int i = 0; i < steps; i++) {
-            float a = (float(i) + dither) * invsteps * 2.0 * Pi;
-            vec2 offset = vec2(cos(a), sin(a)) * (float(j + 1) * radius);
+            float sampleDepth = texture(colortex4, offsetCoord).a;
 
-            vec2 offsetCoord = texcoord + offset;
-            //if(abs(offsetCoord.x - 0.5) >= 0.5 || abs(offsetCoord.y - 0.5) >= 0.5) break;
+            float difference = abs(ExpToLinerDepth(sampleDepth) - v.linearDepth);
 
-            float offsetDepth = texture(depthtex0, offsetCoord).x;
-
-            vec3 S = nvec3(gbufferProjectionInverse * nvec4(vec3(ApplyTAAJitter(offsetCoord), offsetDepth) * 2.0 - 1.0));
-
-            ao += ComputeAO(v.vP, m.texturedNormal, S);
-            //ao += ComputeAO(v.vP, m.texturedNormal, S) * step(max(abs(offsetCoord.x - 0.5), abs(offsetCoord.y - 0.5)), 0.5);
+            if(difference < closest.z) {
+                closest = vec3(offset, difference);
+            }
         }
     }
 
-    return 1.0 - ao / (float(rounds) * float(steps));
-    
+    coord += closest.xy;
+
+    #if SSAO_Quality < High
+    float radius = 1.0;
+    #else
+    float radius = 2.0;
     #endif
+
+    for(float i = -radius; i <= radius; i += 1.0) {
+        for(float j = -radius; j <= radius; j += 1.0) {
+            vec2 offsetCoord = coord + vec2(i, j) * texelSize;
+
+            float sampleDepth = texture(colortex4, offsetCoord).a;
+
+            float weight = 1.0 - saturate(abs(ExpToLinerDepth(sampleDepth) - v.linearDepth) * 16.0);
+            if(i == 0.0 && j == 0.0) weight = 1.0;
+
+            float sampleAO = texture(colortex3, offsetCoord).a;
+
+            ao += sampleAO * weight;
+            totalWeight += weight;
+        }
+    }
+
+    ao /= totalWeight;
+
+    return ao;
+#endif
 }
 
 float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirection, in float material_bias) {
@@ -184,7 +205,8 @@ void main() {
     vec3 shading = CalculateShading(vec3(texcoord, v0.depth), lightVector, m.geometryNormal, simplesss * 2.0);
          shading *= contactShadow;
 
-    vec3 sunLightShading = DiffuseLighting(m, lightVector, v0.eyeDirection) + SpecularLighting(m, lightVector, v0.eyeDirection);
+    vec3 sunLightShading = DiffuseLighting(m, lightVector, v0.eyeDirection);
+         sunLightShading += SpecularLighting(m, lightVector, v0.eyeDirection);
 
     if(simplesss > 0.5 && m.material > 65.0) {
         sunLightShading += LeavesShading(lightVector, v0.eyeDirection, m.texturedNormal, m.albedo.rgb, m.transmittance, m.scattering);
@@ -218,8 +240,8 @@ void main() {
 
     float ao = ScreenSpaceAmbientOcclusion(m, v0);
 
-    float SkyLighting0 = saturate(rescale(ao * pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0));
-    float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 8.0, 1.0));
+    float SkyLighting0 = saturate(rescale(pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0)) * ao;
+    float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 15.0, 1.0));
     float skylightMap = mix(SkyLighting0, SkyLighting1, 0.7);
 
     vec3 weatherLighting = SunLightingColor * Tfog * tracingFogSun * sunLightExtinction;
@@ -228,7 +250,7 @@ void main() {
     color += weatherLighting2 * skylightMap;
 
     vec3 weatherLighting1 = invPi * m.albedo * weatherLighting * mix(HG(abs(worldSunVector.y), -0.1), HG(abs(worldSunVector.y), 0.7), 0.4);
-    color += weatherLighting1 * ao * skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
+    color += weatherLighting1 * skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
 
     vec3 AmbientLightColor = SkyLightingColor;
 
@@ -294,7 +316,7 @@ void main() {
     float blockLight1 = 1.0 / pow2(max(1.0, (1.0 - m.lightmap.x) * 15.0));
 
     vec3 blockLight = (BlockLightingColor * m.albedo);
-         blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (blockLight0 + blockLight1) * (1.0 - m.metallic) * (1.0 - m.metal) * (1.0 - m.emissive);
+         blockLight *= (1.0 / 4.0 * Pi) * m.lightmap.x * (blockLight0 + blockLight1) * (1.0 - m.metallic) * (1.0 - m.metal);
 
     color += blockLight;
 
