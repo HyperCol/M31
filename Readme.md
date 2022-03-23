@@ -1,14 +1,23 @@
-![Virgo.png](image/Readme/Virgo.png)
+# M31
 
-一款Minecraft着色器，正在开发
+M31 is a Minecraft shaderpack for use with the [OptiFine mod](https://optifine.net/home).
 
-# 目标
+M31 is dedicated to providing a high performance, fully functional, highly customizable Minecraft shader.
 
-比较完整的效果
+## Installation
 
-自洽的渲染体系
+1. Download and install a compatible version of Optifine
+2. If you haven't already, launch the game once to create the 'shaderpacks' folder, which is located adjacent to your "saves" folder
+3. Download the M31 and place it into your 'shaderpacks' folder.
+4. (For legacy Minecraft versions before 1.12) you may need to go on Youtube or Bilibili and look at how older shaderpacks used to be installed. This usually involved inzipping the shaderpack and making sure the correct sub-folder is placed into your game's 'shaderpacks' folder.
 
-# 版权
+## Requirement
+
+OptiFine 1.12.2 HD U F4 (or newer)
+
+OpenGL 2.1 compatible device
+
+## Copyright
 
 Apache License
 
