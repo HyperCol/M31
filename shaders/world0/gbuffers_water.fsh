@@ -12,6 +12,8 @@ in vec2 texcoord;
 in vec2 lmcoord;
 
 in vec3 normal;
+in vec3 binormal;
+in vec3 tangent;
 
 in vec4 color;
 
@@ -31,7 +33,12 @@ void main() {
     vec4 texture2 = texture(normals, texcoord);
     vec4 texture3 = texture(specular, texcoord);
 
-    vec2 EncodeNormal = EncodeSpheremap(normal);
+    mat3 tbn = mat3(tangent, binormal, normal);
+
+    vec2 normalMap = texture2.xy * 2.0 - 1.0;
+    vec3 texturedNormal = normalize(tbn * vec3(normalMap, clamp(sqrt(1.0 - dot(normalMap, normalMap)), -1.0, 1.0)));
+
+    vec2 EncodeNormal = EncodeSpheremap(texturedNormal);
 
     float tileMask = round(TileMask);
 

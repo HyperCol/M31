@@ -4,18 +4,28 @@ layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
 
 in float[3] vTileMask;
+
 in vec2[3] vtexcoord;
 in vec2[3] vlmcoord;
+
 in vec3[3] vnormal;
+in vec3[3] vbinormal;
+in vec3[3] vtangent;
+
 in vec4[3] vcolor;
 
 in vec3[3] worldPosition;
 in vec4[3] vertexPosition;
 
 out float TileMask;
+
 out vec2 texcoord;
 out vec2 lmcoord;
+
 out vec3 normal;
+out vec3 binormal;
+out vec3 tangent;
+
 out vec4 color;
 
 uniform mat4 gbufferModelViewInverse;
@@ -51,9 +61,14 @@ void main() {
         gl_Position = vertexPosition[i];
 
         TileMask    = vTileMask[i];
+
         texcoord    = vtexcoord[i];
         lmcoord     = vlmcoord[i];
+
         normal      = vnormal[i];
+        binormal    = vbinormal[i];
+        tangent     = vtangent[i];
+
         color       = vcolor[i];
 
         EmitVertex();

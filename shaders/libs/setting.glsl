@@ -21,7 +21,8 @@
 #define Custom 1
 
 //Lighting Setting
-#define Sun_Light_Luminance 4.0
+#define Sun_Light_Luminance 5.0
+#define Sky_Light_Luminance 0.7
 #define Moon_Light_Luminance 0.5
 #define Blocks_Light_Luminance 1.0
 #define Nature_Light_Min_Luminance 0.1
@@ -54,6 +55,8 @@
 #define Sky_Light_Level_Min 0                       //[0 1 2 3 4 5 6 7 8 9 10 11 12 13 14]
 
 //Materials
+#define BRDF_Roughness_Bias 0.7
+
 #define Parallax_Mapping
 #define Parallax_Mapping_Quality Medium             //[Medium High Ultra]
 #define Parallax_Mapping_Distance 32.0              //
@@ -73,6 +76,7 @@
 #define Translucent_Blocks_Quality High             //[Low High]
 
 #define Screen_Space_Reflection Medium              //[Medium High Ultra]
+#define Enabled_Environment_Map
 
 //Atmosphere
 #define Altitude_Scale 1.0                          //[1.0 10.0 25.0 50.0 75.0 100.0 250.0 500.0 750.0 1000.0]
@@ -184,8 +188,7 @@
 #define Camera_Shutter_Speed 0                      //[0 10 20 30 40 50 60 70 80 90 100 150 200 300 400]
 
 #define Enabled_Bloom
-    //#define Bloom_Intensity 0.2                         //[0.05 0.1 0.2 0.4 0.6 0.8 1.0 2.0 4.0 8.0 16.0]
-    #define Bloom_Exposure_Value -3.0                     //[-5.0 -4.5 -4.0 -3.5 -3.0 -2.5 -2.0 -1.5 -1.0]
+    #define Bloom_Exposure_Value -4.0               //[-7.0 -6.0 -5.0 -4.0 -3.0 -2.0 -1.0]
     //#define Bloom_Intensity_Test                    //
 
 //Antialiasing

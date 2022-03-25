@@ -118,7 +118,7 @@ float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
 
     ao /= totalWeight;
 
-    return ao;
+    return saturate(rescale(ao, 0.5, 1.0));
 #endif
 }
 
@@ -206,7 +206,10 @@ void main() {
          shading *= contactShadow;
 
     vec3 sunLightShading = DiffuseLighting(m, lightVector, v0.eyeDirection);
-         sunLightShading += SpecularLighting(m, lightVector, v0.eyeDirection);
+    
+    if(dot(m.geometryNormal, lightVector) > 0.0) {
+        sunLightShading += SpecularLighting(m, lightVector, v0.eyeDirection);
+    }
 
     if(simplesss > 0.5 && m.material > 65.0) {
         sunLightShading += LeavesShading(lightVector, v0.eyeDirection, m.texturedNormal, m.albedo.rgb, m.transmittance, m.scattering);
@@ -241,7 +244,7 @@ void main() {
     float ao = ScreenSpaceAmbientOcclusion(m, v0);
 
     float SkyLighting0 = saturate(rescale(pow2(m.lightmap.y * m.lightmap.y), 0.7, 1.0)) * ao;
-    float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 15.0, 1.0));
+    float SkyLighting1 = pow2(m.lightmap.y) * m.lightmap.y * pow(ao, max((1.0 - m.lightmap.y) * 8.0, 1.0));
     float skylightMap = mix(SkyLighting0, SkyLighting1, 0.7);
 
     vec3 weatherLighting = SunLightingColor * Tfog * tracingFogSun * sunLightExtinction;
@@ -360,8 +363,7 @@ void main() {
     //color = GammaToLinear(color);
 
     gl_FragData[0] = vec4(texture(colortex0, texcoord).rgb, 0.0);
-    gl_FragData[1] = vec4(color, texture(colortex1, texcoord).r);
-    //gl_FragData[1] = vec4(texture(gnormal, texcoord).zw, v.depth, 1.0);
+    gl_FragData[1] = vec4(color, ao);
     gl_FragData[2] = vec4(vec2(0.0), v0.depth, 1.0);
 }
 /* DRAWBUFFERS:034 */

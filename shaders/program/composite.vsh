@@ -89,11 +89,10 @@ void main() {
     vec3 samplePosition = vec3(0.0, planet_radius + 1.0, 0.0);
 
     float theta     = dot(upVector, sunVector);
-    float theta2    = mix(0.0, theta, 1.0);
-    float silverIntensity = 1.0;
-    float phasem    = min(HG(theta2, 0.76) * silverIntensity, 1.0);
-    float phasem2   = min(HG(-theta2, 0.76) * silverIntensity, 1.0);
-    float phaser    = min((3.0 / 16.0 / Pi) * (1.0 + theta2 * theta2) * silverIntensity, 1.0);
+    float silverIntensity = Sky_Light_Luminance;
+    float phasem    = min(HG(theta, 0.76) * silverIntensity, 1.0);
+    float phasem2   = min(HG(-theta, 0.76) * silverIntensity, 1.0);
+    float phaser    = min((3.0 / 16.0 / Pi) * (1.0 + theta * theta) * silverIntensity, 1.0);
 
     SunLightingColor    = SimpleLightExtinction(samplePosition, worldSunVector, 0.2, 1.0) * Sun_Light_Luminance;
     MoonLightingColor   = SimpleLightExtinction(samplePosition, worldMoonVector, 0.2, 1.0) * Moon_Light_Luminance;

@@ -434,7 +434,7 @@ void LandAtmosphericScattering(inout vec3 color, in Vector v, in AtmosphericData
         vec3 rayPosition = origin + direction * (float(i) * stepLength);
 
         vec3 shadowCoord = WorldPositionToShadowCoord(rayPosition - cameraPosition);
-        float visibility = abs(shadowCoord.x - 0.5) >= 0.5 || abs(shadowCoord.y - 0.5) >= 0.5 || shadowCoord.z + 1e-5 > 1.0 ? 1.0 : step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x);
+        float visibility = GetShadowTexture0(shadowCoord)
         float vRayleigh = mix(visibility, 1.0, 0.1);
         float vMie = mix(visibility, 1.0, 0.05);
 
@@ -613,7 +613,7 @@ vec2 IntersectNearClouds(in vec3 ro, in vec3 rd, in vec3 pa, in vec3 pb, in floa
     return result;
 
 }
-
+#ifdef Clouds
 void CalculateClouds(inout vec3 color, in Vector v, inout float outDepth, in bool isSky) {
     vec3 direction = v.worldViewDirection;
 
@@ -964,7 +964,7 @@ void CalculateClouds(inout vec3 color, in Vector v, inout float outDepth, in boo
     color += scattering;
     #endif
 }
-
+#endif
 uniform sampler2D colortex8;
 uniform sampler2D colortex9;
 uniform sampler2D colortex10;
@@ -1035,7 +1035,7 @@ void main() {
     color = color * MappingToSDR;
     color = GammaToLinear(color);
 
-    gl_FragData[0] = vec4(color, 1.0);
+    gl_FragData[0] = vec4(color, texture(colortex3, texcoord).a);
     gl_FragData[1] = vec4(withCloudsDepth, vec3(0.0));
 }
 /* DRAWBUFFERS:34 */

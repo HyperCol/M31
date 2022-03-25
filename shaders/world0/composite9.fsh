@@ -27,13 +27,13 @@ void main() {
 
             float weight = exp(-pow2(length(position)) / 2.56);
 
-            color += LinearToGamma(texture(gnormal, coord * 0.5 + position * texelSize).rgb) * weight;
+            color += LinearToGamma(texture(gnormal, coord * 0.5 + position * texelSize).rgb) * weight * MappingToHDR;
             total += weight;
         }
     }
 
     color /= total;
-    color = GammaToLinear(color);
+    color = GammaToLinear(color * MappingToSDR);
 
     gl_FragData[0] = vec4(color, 1.0);
     }

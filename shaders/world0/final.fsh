@@ -140,11 +140,15 @@ void main() {
 	bloom += GetBloomSample(offset, 12.0);
 	bloom += GetBloomSample(offset, 16.0);
 
-	float weight0 = exp(-1e-5 / 10.24);
-
-	bloom.rgb += color * MappingToSDR * weight0;
-	bloom.a += weight0;
+	//float weight0 = exp(-1e-5 / 10.24);
+	//bloom.rgb += color * MappingToSDR * weight0;
+	//bloom.a += weight0;
+	
 	bloom.rgb *= MappingToHDR / bloom.a;
+
+	if(maxComponent(bloom.rgb) > 0.0) {
+		bloom.rgb = luminance3(bloom.rgb) * (bloom.rgb / dot(bloom.rgb, vec3(1.0 / 3.0)));
+	}
 
 	#ifdef Bloom_Intensity_Test
 		color = vec3(sum3(color));

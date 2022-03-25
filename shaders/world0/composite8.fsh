@@ -1,7 +1,7 @@
 #version 130
 
 uniform sampler2D composite;
-uniform sampler2D colortex7;
+uniform sampler2D colortex2;
 
 uniform sampler2D depthtex0;
 
@@ -9,6 +9,7 @@ in vec2 texcoord;
 
 /*
 const bool compositeMipmapEnabled = true;
+const bool colortex2MipmapEnabled = true;
 */
 
 #include "/libs/setting.glsl"
@@ -61,7 +62,7 @@ vec3 CalculateBloomSample(in float level, inout vec2 offset) {
 
             float weight = 1.0;//exp(-pow2(length(position)) / 2.56);
 
-            vec3 colorSample = texture(composite, coord + position * texelSize * level).rgb;
+            vec3 colorSample = LinearToGamma(texture(colortex2, coord + position * texelSize * level).rgb) * MappingToHDR;
 
             color += colorSample * weight;
             total += weight;
@@ -82,6 +83,8 @@ void main() {
     bloom += CalculateBloomSample(8.0, offset);
     bloom += CalculateBloomSample(12.0, offset);
     bloom += CalculateBloomSample(16.0, offset);
+
+    bloom = GammaToLinear(bloom * MappingToSDR);
     
     gl_FragData[0] = vec4(bloom, 1.0);
 }

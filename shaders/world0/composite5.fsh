@@ -187,8 +187,11 @@ vec2 DualParaboloidMapping(in vec3 position) {
 vec3 EnvironmentReflection(in vec3 L, in Gbuffers m, inout float alpha) {
     vec2 coord = DualParaboloidMapping(L);
 
+#ifdef Enabled_Environment_Map
     float depth = texture(shadowtex0, coord).x;
-
+#else
+    float depth = 1.0;
+#endif
     vec3 color = vec3(0.0);
 
     if(depth > 1.0 - 1e-5) {
@@ -203,19 +206,30 @@ vec3 EnvironmentReflection(in vec3 L, in Gbuffers m, inout float alpha) {
         CalculateAtmosphericScattering(color, atmosphere_color, rayOrigin, L, worldSunVector, vec2(0.0));
         color += atmosphere_color;
 
+        #if SSAO_Quality > OFF
+        if(texture(colortex0, texcoord).a < 0.1) {
+            color *= saturate(rescale(texture(colortex3, texcoord).a, 0.8, 1.0));
+        }
+        #endif
+
+        color *= saturate(rescale(m.lightmap.y, 0.7, 1.0));
+
         alpha = 0.0;
     } else {
+    #ifdef Enabled_Environment_Map
         vec3 albedo = LinearToGamma(texture(shadowcolor0, coord).rgb);
 
         vec2 lightmap = unpack2x4(texture(shadowcolor1, coord).z);
+             lightmap.y = min(lightmap.y, m.lightmap.y);
 
         vec3 shadowCoord = normalize(L.xyz) * depth * 120.0;
              shadowCoord = ConvertToShadowCoord(shadowCoord);
              shadowCoord.xy *= ShadowMapDistortion(shadowCoord.xy);
              shadowCoord.xyz = RemapShadowCoord(shadowCoord.xyz);
              shadowCoord = shadowCoord * 0.5 + 0.5;
+             shadowCoord.z -= 1.0 / 2048.0;
 
-        float shading = step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x + 1.0 / 2048.0) * texture(shadowcolor1, coord).a;
+        float shading = GetShadowTexture0(shadowCoord) * texture(shadowcolor1, coord).a;
         
         vec3 SunLight = albedo * shading * LightingColor * invPi;
 
@@ -233,6 +247,7 @@ vec3 EnvironmentReflection(in vec3 L, in Gbuffers m, inout float alpha) {
         color = SunLight + AmbientLight + torchLight;
 
         alpha = 1.0;
+    #endif
     }
 
     return color;
@@ -262,13 +277,13 @@ void main() {
     vec3 normal = normalize(tbn * rayPDF.xyz);
 
     if(dot(normal, v.eyeDirection) < 0.0) normal = -normal;
-    //if(m.smoothness > 0.95) normal = n;
+    if(m.smoothness > 0.95) normal = n;
 
     vec3 L = normalize(reflect(v.viewDirection, normal));
     vec3 eyeDirection = v.eyeDirection;
     vec3 M = normalize(L + eyeDirection);
 
-    vec3 rayOrigin = v.vP;
+    vec3 rayOrigin = v.vP / v.viewLength * (v.viewLength + m.alpha * 0.25);
          rayOrigin += m.geometryNormal * (1.0 - saturate(rescale(dot(v.eyeDirection, m.geometryNormal), 0.2, 1.0))) * 0.2;
 
     vec3 reflection = vec3(0.0);
@@ -287,8 +302,6 @@ if(m.maskSky < 0.5) {
         reflection = EnvironmentReflection(worldLightDirection, m, alpha);
     }
 
-    if(m.metal > 0.5) color *= 1.0 - alpha;
-
     vec3 fr = SpecularLightingClamped(m, visibleNormal, normalize(reflect(v.viewDirection, visibleNormal)), eyeDirection);
 
     //color = vec3(0.0);
@@ -297,9 +310,12 @@ if(m.maskSky < 0.5) {
     color += reflection * fr;
 }
 
+    vec3 noTonemapping = GammaToLinear(color * MappingToSDR);
+
     color = color / (color + 1.0);
     color = GammaToLinear(color);
 
-    gl_FragData[0] = vec4(color, 1.0);
+    gl_FragData[0] = vec4(noTonemapping, 1.0);
+    gl_FragData[1] = vec4(color, 1.0);
 }
-/* DRAWBUFFERS:3 */
+/* DRAWBUFFERS:23 */

@@ -126,7 +126,7 @@ void main() {
     float update = min(mod(jitterfragCoord.x, 2.0), mod(jitterfragCoord.y, 2.0));
           update = mix(update, 1.0, 0.7);
 
-    float blend = 0.98 * InScreen * weight * update;
+    float blend = 0.98 * InScreen * weight;
 
     vec4 result = mix(vec4(scattering, alpha), previousSample, vec4(blend));
     //vec4 result = vec4(scattering, alpha);

@@ -1,5 +1,5 @@
 vec3 CalculateShadowVisbility(in vec3 coord) {
-    if(abs(coord.x - 0.5) >= 0.5 || abs(coord.y - 0.5) >= 0.5 || coord.z >= 0.9999) return vec3(1.0);
+    if(abs(coord.x / shadowMapScale.x - 0.5) >= 0.5 || abs(coord.y / shadowMapScale.y - 0.5) >= 0.5 || coord.z >= 1.0 - 1e-5) return vec3(1.0);
 
     float v0 = step(coord.z, texture(shadowtex0, coord.xy).x);
     float v1 = step(coord.z, texture(shadowtex1, coord.xy).x);

@@ -392,7 +392,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
               height = max(0.05, height);
 
         vec3 shadowCoord = WorldPositionToShadowCoord(currentPosition - rayStart);
-        float visibility = abs(shadowCoord.x - 0.5) >= 0.5 || abs(shadowCoord.y / 0.5 - 0.5) >= 0.5 || shadowCoord.z + 1e-5 > 1.0 ? 1.0 : step(shadowCoord.z, texture(shadowtex0, shadowCoord.xy).x);
+        float visibility = GetShadowTexture0(shadowCoord);
 
         vec3 cloudsShadow = vec3(1.0);
 

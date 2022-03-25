@@ -56,3 +56,11 @@ vec3 WorldPositionToShadowCoord(in vec3 p) {
 
     return shadowCoord;
 }
+
+float GetShadowTexture0(in vec3 coord) {
+    return abs(coord.x / shadowMapScale.x - 0.5) >= 0.5 || abs(coord.y / shadowMapScale.y - 0.5) >= 0.5 || coord.z + 1e-5 > 1.0 ? 1.0 : step(coord.z, texture(shadowtex0, coord.xy).x);
+}
+
+float GetShadowTexture1(in vec3 coord) {
+    return abs(coord.x / shadowMapScale.x - 0.5) >= 0.5 || abs(coord.y / shadowMapScale.y - 0.5) >= 0.5 || coord.z + 1e-5 > 1.0 ? 1.0 : step(coord.z, texture(shadowtex1, coord.xy).x);
+}

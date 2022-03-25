@@ -1,7 +1,14 @@
 #version 330 compatibility
 
+#include "/libs/setting.glsl"
+
 layout(triangles) in;
+
+#ifdef Enabled_Environment_Map
 layout(triangle_strip, max_vertices = 9) out;
+#else
+layout(triangle_strip, max_vertices = 3) out;
+#endif
 
 uniform int entityId;
 
@@ -65,7 +72,7 @@ vec4 DualParaboloidMapping(in vec4 position, in bool neg) {
 
 void main() {
     isShadowMap = 0.0;
-
+    
     #if MC_VERSION >= 11605
     mat4 gbufferProjectionFix = mat4(gbufferProjection0, gbufferProjection1, gbufferProjection2, gbufferProjection3);
     #else
@@ -76,6 +83,7 @@ void main() {
 
     bool isplayer = entityId == 1 && length(triangleCenter) < 1.0;
 
+#ifdef Enabled_Environment_Map
     if(max(worldPosition[0].z, max(worldPosition[1].z, worldPosition[2].z)) > 0.0 && !isplayer) {
     for(int i = 0; i < 3; i++) {
         gl_Position = worldPosition[i];
@@ -147,7 +155,7 @@ void main() {
         EmitVertex();
         EndPrimitive();
     }
-
+#endif
     for(int i = 0; i < 3; i++) {
         gl_Position = shadowCoord[i];
         gl_Position.xy *= ShadowMapDistortion(gl_Position.xy);
