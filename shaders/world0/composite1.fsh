@@ -130,6 +130,7 @@ void main() {
 
     vec4 result = mix(vec4(scattering, alpha), previousSample, vec4(blend));
     //vec4 result = vec4(scattering, alpha);
+    //result.rgb = texture(colortex9, texcoord * 0.5).rgb;
 
     gl_FragData[0] = texture(colortex8, closest.xy);
     gl_FragData[1] = result;

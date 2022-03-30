@@ -464,15 +464,19 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
     outTransmittance = transmittance;
 }
 
-void main() {
-    //materials
-    Gbuffers m = GetGbuffersData(texcoord);
+uniform vec2 jitter2;
 
-    WaterData t = GetWaterData(texcoord);
+void main() {
+    vec2 coord = texcoord;
+
+    //materials
+    Gbuffers m = GetGbuffersData(coord);
+
+    WaterData t = GetWaterData(coord);
 
     //opaque
-    Vector v0 = GetVector(texcoord, m.maskWeather > 0.5 ? texture(colortex4, texcoord).x : texture(depthtex0, texcoord).x);
-    Vector v1 = GetVector(texcoord, m.tile_mask == Mask_ID_Particles ? texture(depthtex0, texcoord).x : texture(depthtex1, texcoord).x);
+    Vector v0 = GetVector(coord, m.maskWeather > 0.5 ? texture(colortex4, coord).x : texture(depthtex0, coord).x);
+    Vector v1 = GetVector(coord, m.tile_mask == Mask_ID_Particles ? texture(depthtex0, coord).x : texture(depthtex1, coord).x);
 
     AtmosphericData atmospheric = GetAtmosphericDate(timeFog, timeHaze);    
 

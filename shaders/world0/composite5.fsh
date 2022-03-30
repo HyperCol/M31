@@ -2,6 +2,7 @@
 
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
+uniform sampler2D colortex5;
 
 #include "/libs/setting.glsl"
 #include "/libs/common.glsl"
@@ -253,10 +254,11 @@ vec3 EnvironmentReflection(in vec3 L, in Gbuffers m, inout float alpha) {
     return color;
 }
 
+
 void main() {
     Gbuffers m = GetGbuffersData(texcoord);
 
-    Vector v = GetVector(-ApplyTAAJitter(-texcoord), m.maskWeather > 0.5 ? texture(colortex4, texcoord).x : texture(depthtex0, texcoord).x);
+    Vector v = GetVector(-ApplyTAAJitter(-texcoord), texture(depthtex0, texcoord).x);
 
     vec3 color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
 
@@ -283,7 +285,7 @@ void main() {
     vec3 eyeDirection = v.eyeDirection;
     vec3 M = normalize(L + eyeDirection);
 
-    vec3 rayOrigin = v.vP / v.viewLength * (v.viewLength + m.alpha * 0.25);
+    vec3 rayOrigin = v.vP;
          rayOrigin += m.geometryNormal * (1.0 - saturate(rescale(dot(v.eyeDirection, m.geometryNormal), 0.2, 1.0))) * 0.2;
 
     vec3 reflection = vec3(0.0);
@@ -309,6 +311,11 @@ if(m.maskSky < 0.5) {
 
     color += reflection * fr;
 }
+
+    vec3 diffuse = LinearToGamma(texture(colortex4, texcoord).rgb);
+         diffuse *= m.albedo * LightingColor * invPi * 1.0;
+
+    color += diffuse * (1.0 - max(m.maskWater, m.maskSky)) * (1.0 - m.metallic) * (1.0 - step(0.9, m.metallic));
 
     vec3 noTonemapping = GammaToLinear(color * MappingToSDR);
 

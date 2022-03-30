@@ -40,7 +40,7 @@ vec3 GetClosest(in vec2 coord) {
 
     for(float i = -1.0; i <= 1.0; i += 1.0) {
         for(float j = -1.0; j <= 1.0; j += 1.0) {
-            float depth = texture(colortex4, coord + vec2(i, j) * texelSize).x;
+            float depth = texture(depthtex0, coord + vec2(i, j) * texelSize).x;
 
             if(depth < closest.z) {
                 closest = vec3(i, j, depth);

@@ -21,7 +21,7 @@
 #define Custom 1
 
 //Lighting Setting
-#define Sun_Light_Luminance 5.0
+#define Sun_Light_Luminance 4.0
 #define Sky_Light_Luminance 0.7
 #define Moon_Light_Luminance 0.5
 #define Blocks_Light_Luminance 1.0
@@ -103,7 +103,7 @@
 
 //#define Clouds_Shadow_On_Atmosphric_Scattering      //WIP
 
-#define Clouds_Speed 1.0                            //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
+#define Clouds_Speed 0.0                            //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
 #define Clouds_X_Speed 30.0
 #define Clouds_Vertical_Speed -45.0
 

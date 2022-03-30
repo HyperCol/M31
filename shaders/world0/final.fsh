@@ -6,7 +6,7 @@ const int colortex1Format = RGBA16;
 const int colortex2Format = RGBA16;
 const int colortex3Format = RGBA16;
 const int colortex4Format = RGBA32F;
-const int colortex5Format = RGB32F;
+const int colortex5Format = RGBA32F;
 const int colortex6Format = RGBA16;
 const int colortex7Format = RGBA16;
 
@@ -60,7 +60,7 @@ vec3 ACESToneMapping(in vec3 color) {
 }
 
 vec3 saturation(in vec3 color, in float s) {
-	float lum = dot(color, vec3(0.4, 0.4, 0.2));
+	float lum = dot(color, vec3(1.0 / 3.0));
 	return max(vec3(0.0), lum + (color - lum) * s);
 }
 
@@ -176,9 +176,11 @@ void main() {
 	color *= 1.0 / (1.2 * exp2(ev));
 	color *= Camera_ISO;
 
+	//color = color / (color + 1.0);
+
     color = Uncharted2Tonemap(color);
-    ////color /= Uncharted2Tonemap(vec3(9.0));
-	color = saturation(color, 1.2);
+    //color /= Uncharted2Tonemap(vec3(9.0));
+	color = saturation(color, 1.26);
     //color = ACESToneMapping(color);
 
     color = GammaToLinear(color);

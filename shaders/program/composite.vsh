@@ -66,10 +66,19 @@ vec3 ColorTemperatureToRGB(const in float temperature){
     return mix(clamp(vec3(m[0] / (vec3(clamp(temperature, 1000.0, 40000.0)) + m[1]) + m[2]), vec3(0.0), vec3(1.0)), vec3(1.0), smoothstep(1000.0, 0.0, temperature));
 }
 
+uniform vec2 jitter2;
+
 void main() {
     gl_Position = ftransform();
-
     texcoord = gl_MultiTexCoord0.xy;
+
+    #if defined(RenderResolution)
+    gl_Position.xy = gl_Position.xy * 0.5 + 0.5;
+    gl_Position.xy *= RenderResolution;
+    gl_Position.xy = gl_Position.xy * 2.0 - 1.0;
+
+    //texcoord -= jitter2;
+    #endif
 
     #if !defined(MC_VERSION)
     lightVector = normalize(shadowLightPosition);
