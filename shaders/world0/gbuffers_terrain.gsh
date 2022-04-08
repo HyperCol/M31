@@ -4,6 +4,7 @@ layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
 
 in float[3] vTileMask;
+in float[3] vhandness;
 
 in vec2[3] vtexcoord;
 in vec2[3] vmidcoord;
@@ -21,6 +22,8 @@ in vec4[3] vertexPosition;
 out float tileMask;
 out float FullSolidBlock;
 out float TileResolution;
+
+out float handness;
 
 out vec2 texcoord;
 out vec2 lmcoord;
@@ -99,7 +102,7 @@ void main() {
     #endif
 
     vec3 rotate = vec3(r0.x, r1.y, r2.z);
-    lightDirection = mat3(gbufferModelView) * (worldLightVector * rotate);
+    lightDirection = mat3(gbufferModelView) * (worldLightVector);
     
     for(int i = 0; i < 3; i++) {
         gl_Position = vertexPosition[i];
@@ -111,8 +114,9 @@ void main() {
         tangent     = vtangent[i];
         binormal    = vbinormal[i];
         color       = vcolor[i];
+        handness = vhandness[i];
 
-        viewDirection = mat3(gbufferModelView) * (worldPosition[i] * rotate);
+        viewDirection = mat3(gbufferModelView) * (worldPosition[i]);
 
         EmitVertex();   
     }   EndPrimitive();

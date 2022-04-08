@@ -7,6 +7,7 @@ in vec4 at_tangent;
 #define GSH
 
 #ifdef GSH
+    #define handness vhandness
     #define tileMask vTileMask
     #define texcoord vtexcoord
     #define lmcoord vlmcoord
@@ -18,6 +19,8 @@ in vec4 at_tangent;
 #endif
 
 out float tileMask;
+
+out float handness;
 
 out vec2 texcoord;
 out vec2 lmcoord;
@@ -45,9 +48,11 @@ void main() {
 
     color = gl_Color;
 
+    vhandness = at_tangent.w;
     normal = normalize(gl_NormalMatrix * gl_Normal);
     tangent = normalize(gl_NormalMatrix * at_tangent.xyz);
-    binormal = cross(tangent, normal);
+    binormal = normalize(cross(tangent, normal) * at_tangent.w);
+
 
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
     lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;

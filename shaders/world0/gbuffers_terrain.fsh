@@ -18,6 +18,7 @@ in vec2 lmcoord;
 in vec3 normal;
 in vec3 tangent;
 in vec3 binormal;
+in float handness;
 
 in vec3 viewDirection;
 in vec3 lightDirection;
@@ -185,7 +186,7 @@ vec3 normalFromHeight(in vec2 coord, float stepSize, in vec2 tileSize) {
     float py1 = GetHeightMap(OffsetCoord(coord, -e.yx * tileSize, tileSize)) * parallaxMappingDepth;
     float py2 = GetHeightMap(OffsetCoord(coord,  e.yx * tileSize, tileSize)) * parallaxMappingDepth;
     
-    return vec3(px1 - px2, py1 - py2, stepSize);
+    return vec3(px1 - px2, py1 - py2, 1e-5);
 }
 
 vec3 normalFromtexture(in vec2 coord, float stepSize, in vec2 tileSize) {
@@ -196,7 +197,7 @@ vec3 normalFromtexture(in vec2 coord, float stepSize, in vec2 tileSize) {
     float py1 = GetHeightMapTexture(OffsetCoord(coord, -e.yx * tileSize, tileSize)) * parallaxMappingDepth;
     float py2 = GetHeightMapTexture(OffsetCoord(coord,  e.yx * tileSize, tileSize)) * parallaxMappingDepth;
     
-    return vec3(px1 - px2, py1 - py2, stepSize);
+    return vec3(px1 - px2, py1 - py2, 1e-5);
 }
 
 void main() {
@@ -251,12 +252,14 @@ void main() {
     int parallaxSteps = 32;
     #endif
 
+    float depthDifference = max(0.0, GetHeightMap(coord) - parallaxDepth / parallaxMappingDepth);
+
     if(parallaxDepth / parallaxMappingDepth < GetHeightMap(coord) - (16.0 / 255.0) && max(fAtlasSize.x, fAtlasSize.y) > 1.0) {
         vec3 fromTexture = normalFromHeight(coord, parallaxMappingDepth / float(parallaxSteps), tileSize);
 
         n = normalize(tbn * fromTexture);
 
-        tbn = mat3(tangent, cross(tangent, n), n);
+        tbn = mat3(tangent, normalize(cross(tangent, n) * handness), n);
     }
 
     vec3 fromHeightmap = normalize(normalFromHeight(coord, 1.0 / tileResolution / Pixel_Shadow_Resolution, tileSize));
@@ -316,7 +319,8 @@ void main() {
 
         lightmap = clamp(lightmap - (-depth) * occlusion, vec2(0.0), vec2(1.0));
     }
-
+    
+    //albedo.rgb = vec3(saturate(handness * 0.5 + 0.5));
     //if(albedo.a < Alpha_Test_Reference) discard;
 
     //Misc: heightmap self_shadow
