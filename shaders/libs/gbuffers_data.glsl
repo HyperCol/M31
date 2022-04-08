@@ -153,13 +153,15 @@ Vector GetVector(in vec2 coord, in float depthtex) {
 
     v.viewLength = length(v.vP);
 
-    v.wP = mat3(gbufferModelViewInverse) * v.vP + gbufferModelViewInverse[3].xyz;
+    v.wP = mat3(gbufferModelViewInverse) * v.vP;
 
     v.viewDirection = v.vP / v.viewLength;
     v.eyeDirection  = -v.viewDirection;
 
     v.worldViewDirection = v.wP / v.viewLength;
     v.worldEyeDirection  = -v.worldViewDirection;
+
+    v.wP += gbufferModelViewInverse[3].xyz;
 
     return v;
 }

@@ -25,7 +25,12 @@ float R2Dither(in vec2 coord){
     float a1 = 1.0 / 0.75487766624669276;
     float a2 = 1.0 / 0.569840290998;
 
-    return t(mod(coord.x * a1 + coord.y * a2, 1.0));
+    return t(fract(coord.x * a1 + coord.y * a2));
+}
+
+vec3 saturation(in vec3 color, in float s) {
+	float lum = dot(color, vec3(1.0 / 3.0));
+	return max(vec3(0.0), lum + (color - lum) * s);
 }
 
 vec2 RSMGISample(in vec2 E, in float a2) {
@@ -37,7 +42,7 @@ vec2 RSMGISample(in vec2 E, in float a2) {
 }
 
 vec3 CalculateRSMGI(in Gbuffers m, in Vector v) {
-    if(v.viewLength > 64.0) return vec3(0.0);
+    if(v.linearDepth > 64.0) return vec3(0.0);
 
     vec3 viewNormal = m.texturedNormal;
     vec3 worldGeoNormal = (mat3(gbufferModelViewInverse) * viewNormal);
@@ -48,19 +53,20 @@ vec3 CalculateRSMGI(in Gbuffers m, in Vector v) {
     vec3 shadowCoord = ConvertToShadowCoord(v.wP);
     vec3 shadowViewPosition = mat3(shadowProjectionInverse) * shadowCoord.xyz;
 
-    vec3 shadowSampleCoord = shadowCoord;
+    //vec3 shadowSampleCoord = shadowCoord;
 
-    float distortion = ShadowMapDistortion(shadowCoord.xy); 
-
-    shadowSampleCoord.xy *= distortion;
-    shadowSampleCoord = RemapShadowCoord(shadowSampleCoord);
-    shadowSampleCoord = shadowSampleCoord * 0.5 + 0.5;
+    //float distortion = ShadowMapDistortion(shadowCoord.xy); 
+    //shadowSampleCoord.xy *= distortion;
+    //shadowSampleCoord = RemapShadowCoord(shadowSampleCoord);
+    //shadowSampleCoord = shadowSampleCoord * 0.5 + 0.5;
 
     shadowCoord = shadowCoord * 0.5 + 0.5;
     shadowCoord.z -= shadowTexelSize * 2.0;
 
-    float dither = R2Dither((texcoord * 0.5 - jitter) * resolution);
-    float dither2 = R2Dither((1.0 - texcoord) * 0.5 * resolution);
+    vec2 fragCoord = texcoord * resolution * 0.375;
+
+    float dither = R2Dither((texcoord - jitter) * resolution);
+    float dither2 = R2Dither(((1.0 - texcoord) - jitter) * resolution);
 
     int steps = 8;
     float invsteps = 1.0 / float(steps);
@@ -71,37 +77,55 @@ vec3 CalculateRSMGI(in Gbuffers m, in Vector v) {
     float CosTheta = sqrt((1.0 - dither) / ( 1.0 + (0.999 - 1.0) * dither));
     float SinTheta = sqrt(1.0 - CosTheta * CosTheta);
 
-    //vec2 offset = vec2(cos(dither2 * 2.0 * Pi), sin(dither2 * 2.0 * Pi)) * SinTheta * 4.0 * shadowTexelSize * (distortion);
+    //vec2 offset = vec2(cos(dither2 * 2.0 * Pi), sin(dither2 * 2.0 * Pi)) * SinTheta * 4.0 * shadowTexelSize;
 
-    for(int i = 0; i < 8; i++) {
-        float r = hash((float(i) * 0.1 + texcoord * 0.5 - jitter) * resolution) * 2.0 * Pi;
-        vec2 offset = vec2(cos(r) * SinTheta, sin(r) * SinTheta) * 4.0 * shadowTexelSize;
-        vec2 coord = shadowSampleCoord.xy + offset * float(i + 1) * distortion;
+    for(int i = 0; i < 6; i++) {
+        for(int j = 0; j < 4; j++) {
+        float rayLength = float(i) + 1.0;
+        float r = ((dither2 + float(j)) * 0.25) * Pi * 2.0;
+        //float r = (hash(fragCoord + float(i) * resolution + vec2(frameTimeCounter, 0.0) * 64.0) * 0.5 + 0.5) * 2.0 * Pi;
+        
+        vec2 offset = vec2(cos(r) * SinTheta, sin(r) * SinTheta) * 16.0 * shadowTexelSize * rayLength;
+
+        vec3 shadowSampleCoord = shadowCoord * 2.0 - 1.0 + vec3(offset, 0.0);
+             shadowSampleCoord.xy *= ShadowMapDistortion(shadowSampleCoord.xy);
+             shadowSampleCoord = RemapShadowCoord(shadowSampleCoord);
+             shadowSampleCoord = shadowSampleCoord * 0.5 + 0.5;
+
+        vec2 coord = shadowSampleCoord.xy;
 
         float depth = texture(shadowtex0, coord).x;
               depth = (depth * 2.0 - 1.0) / Shadow_Depth_Mul * 0.5 + 0.5;
         if(depth > 0.9999 || abs(coord.x / shadowMapScale.x - 0.5) > 0.5 || abs(coord.y / shadowMapScale.y - 0.5) > 0.5) continue;
 
         vec3 albedo = LinearToGamma(texture(shadowcolor0, coord).rgb);
-             albedo /= mix(1.0, maxComponent(albedo), 0.7);
+             albedo /= mix(1.0, maxComponent(albedo), 0.5);
+             albedo = saturation(albedo, 0.5);
 
         vec3 normal = texture(shadowcolor1, coord).xyz * 2.0 - 1.0;
              normal = mat3(shadowModelView) * normal;
 
-        vec3 halfPosition = vec3(shadowCoord.xy + offset * float(i + 1), depth) * 2.0 - 1.0;
+        vec3 halfPosition = vec3(shadowCoord.xy + offset, depth) * 2.0 - 1.0;
              halfPosition = mat3(shadowProjectionInverse) * halfPosition - shadowViewPosition;
+
         vec3 direction = normalize(halfPosition);
 
+        if(sqrt(halfPosition.z * halfPosition.z) > length(halfPosition.xy) * 1.0) continue;
+
         float ndotl = max(0.0, dot(-direction, normal)) * max(0.0, dot(direction, shadowViewNormal));
+              ndotl *= max(0.0, dot(shadowViewLight, normal));
 
-        float attenuation = min(1.0, 4.0 / pow2(length(halfPosition)));
+        float attenuation = 1.0 / max(1e-5, pow2(length(halfPosition)));
 
-        diffuse += albedo * ndotl * attenuation;
-        weight += 1.0 / (float(i + 1));
+        diffuse += albedo * min(1.0, ndotl * attenuation * 256.0);
+        weight += 1.0;
+        }
     }
 
     if(weight > 0.0)
     diffuse /= weight;
+
+    //diffuse *= invsteps;
 
     return diffuse;
 }

@@ -1,20 +1,29 @@
 #version 130
 
-uniform sampler2D colortex2;
+uniform sampler2D colortex3;
 uniform sampler2D colortex4;
 uniform sampler2D colortex5;
-uniform sampler2D colortex6;
-
-uniform sampler2D depthtex0;
 
 const bool colortex5Clear = false;
-const bool colortex6Clear = false;
 
 #include "/libs/setting.glsl"
 #include "/libs/common.glsl"
 #include "/libs/uniform.glsl"
+#include "/libs/vertex_data_inout.glsl"
+#include "/libs/gbuffers_data.glsl"
 
-in vec2 texcoord;
+float t(in float z){
+    if(0.0 <= z && z < 0.5) return 2.0*z;
+    if(0.5 <= z && z < 1.0) return 2.0 - 2.0*z;
+    return 0.0;
+}
+
+float R2Dither(in vec2 coord){
+    float a1 = 1.0 / 0.75487766624669276;
+    float a2 = 1.0 / 0.569840290998;
+
+    return t(mod(coord.x * a1 + coord.y * a2, 1.0));
+}
 
 vec3 projectionToScreen(in vec3 P){
     return nvec3(gbufferProjection * nvec4(P)) * 0.5 + 0.5;
@@ -61,29 +70,46 @@ void main() {
 
     vec3 vP = nvec3(gbufferProjectionInverse * nvec4(vec3(texcoord, depth) * 2.0 - 1.0));
     vec3 wP = mat3(gbufferModelViewInverse) * vP + gbufferModelViewInverse[3].xyz;
+    float viewLength = length(vP);
 
     vec3 normal = DecodeSpheremap(texture(colortex2, texcoord).rg);
+    vec3 worldNormal = mat3(gbufferModelViewInverse) * normal;
 
-    vec2 coord = clamp(texcoord * 0.5, texelSize * 2.0, 0.5 - texelSize * 2.0);
+    vec3 t = normalize(mat3(gbufferModelView) * cross(worldNormal, vec3(0.0, 1.0, 1.0)));
+    vec3 b = cross(t, normal);
+    mat3 tbn = mat3(t, b, normal);
+
+    vec2 coord = clamp(texcoord * 0.375, texelSize * 3.0, 0.375 - texelSize * 3.0);
     
-    vec3 color = vec3(0.0);
+    vec3 centerColor = texture(colortex4, coord).rgb;
+    vec3 currentColor = vec3(0.0);
     float totalWeight = 0.0;
     
+    vec3 m2 = vec3(0.0);
+
     vec3 closest = vec3(0.0, 0.0, 1000.0);
 
     for(float i = -2.0; i <= 2.0; i += 1.0) {
         for(float j = -2.0; j <= 2.0; j += 1.0) {
             vec2 sampleCoord = coord + vec2(i, j) * texelSize;
 
-            vec3 sampleColor = texture(colortex4, sampleCoord).rgb;
             float sampleLinear = ExpToLinerDepth(texture(colortex4, sampleCoord).a);
+            float difference = abs(sampleLinear - linearDepth);
+            float weight = 1.0 - min(1.0, difference * 16.0);
 
-            float weight = 1.0 - min(1.0, abs(linearDepth - sampleLinear) * 16.0);
+            //vec3 sampleNormal = DecodeSpheremap(texture(colortex2, sampleCoord).rg);
+            //float normalWeight = max(0.0, rescale(dot(sampleNormal, normal), 0.9999, 1.0));
+            //weight *= normalWeight;
 
-            color += sampleColor * weight;
+            vec3 sampleColor = texture(colortex4, sampleCoord).rgb;
+            //float colorWeight = dot(vec3(1.0 / 3.0), abs(centerColor - sampleColor));
+            //weight *= 1.0 - min(1.0, colorWeight * 4.0);
+
+            //if(i == 0.0 && j == 0.0) weight = 1.0;
+
+            currentColor += sampleColor * weight;
+
             totalWeight += weight;
-
-            float difference = abs(linearDepth - sampleLinear);
 
             if(difference < closest.z) {
                 closest = vec3(i, j, difference);
@@ -91,33 +117,81 @@ void main() {
         }
     }
 
-    if(totalWeight > 0.0) {
-        color /= totalWeight;
-    } else {
-        color = texture(colortex4, coord + closest.xy * texelSize).rgb;
+    vec3 closestColor = texture(colortex4, coord + closest.xy * texelSize).rgb;
+
+    currentColor += closestColor * 1.0;
+    currentColor /= totalWeight + 1.0;
+
+    //currentColor /= totalWeight;
+
+    //currentColor = texture(colortex4, coord).rgb;
+
+    //if(totalWeight > 0.0) {
+    //    currentColor /= totalWeight;
+    //} else {
+    //    currentColor = texture(colortex4, coord + closest.xy * texelSize).rgb;
+    //}
+
+    #if 0
+    float dither = R2Dither((texcoord - jitter) * resolution);
+    float dither2 = R2Dither((1.0 - texcoord) * resolution);
+
+    float CosTheta = sqrt((1.0 - dither) / ( 1.0 + (0.999 - 1.0) * dither));
+    float SinTheta = sqrt(1.0 - CosTheta * CosTheta);
+
+    vec3 direction = vec3(cos(dither2 * 2.0 * Pi) * SinTheta, sin(dither2 * 2.0 * Pi) * SinTheta, CosTheta);
+    vec2 bounceCoord = ScreenSpaceBounce(vP, normalize(tbn * direction));
+
+    if(bounceCoord.x > 0.0 && bounceCoord.y > 0.0) {
+        currentColor += GammaToLinear(LinearToGamma(currentColor) + LinearToGamma(texture(colortex4, bounceCoord * 0.375).rgb));
     }
+    #endif
+
+    //currentColor = GammaToLinear(currentColor);
 
     vec2 velocity = GetVelocity(vec3(texcoord, depth));
     if(depth < 0.7) velocity *= 0.001;
     vec2 previousCoord = (texcoord - velocity);
 
-    float blend = 0.95;
+    float blend = 0.98;
           blend *= step(abs(previousCoord.x - 0.5), 0.5) * step(abs(previousCoord.y - 0.5), 0.5);
 
-    vec3 previousViewPosition = nvec3(gbufferProjectionInverse * nvec4(vec3(previousCoord, texture(depthtex0, previousCoord).x) * 2.0 - 1.0));
-    vec3 halfVector = normalize(normalize(vP) / 0.9999 - normalize(previousViewPosition));
-
     float accumulationDepth = texture(colortex5, previousCoord).a;
-    vec3 previousSampleCoord = vec3(previousCoord, accumulationDepth);
+    float accumulationLinear = ExpToLinerDepth(accumulationDepth);
+    vec3 previousSampleCoord = vec3(previousCoord, texture(depthtex0, previousCoord).x);
     vec3 previousSamplePosition = nvec3(gbufferProjectionInverse * nvec4(previousSampleCoord * 2.0 - 1.0));
+    vec3 accumulationSamplePosition = nvec3(gbufferProjectionInverse * nvec4(vec3(previousCoord, accumulationDepth) * 2.0 - 1.0));
 
-    blend *= 1.0 - min(1.0, length(vP - previousSamplePosition) / 2.0 / max(1.0, dot(halfVector, normal) * 2.16));
+    float ndoth = abs(dot(normalize(vP / 0.999 - accumulationSamplePosition), normal));
+    float ndotv = abs(dot(normalize(vP), normal));
+
+    float blocker = length(accumulationSamplePosition);
+    float penumbra = abs(length(vP) - blocker) / blocker;
+
+    blend *= 1.0 - min(1.0, penumbra * 2.0 * max(1.0, ndoth / max(1e-5, ndotv)));
 
     vec3 previousColor = texture(colortex5, previousCoord).rgb;
 
-    vec3 accumulation = saturate(mix(color, previousColor, vec3(blend)));
+    vec3 accumulation = saturate(mix(currentColor, previousColor, vec3(blend)));
 
-    gl_FragData[0] = vec4(accumulation, depth);
-    gl_FragData[1] = vec4(accumulation, mix(depth, accumulationDepth, blend));
+    Gbuffers m = GetGbuffersData(texcoord);
+
+    vec3 color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
+
+    vec3 diffuse = LinearToGamma(accumulation) * LightingColor * m.albedo / 3.14159265;
+    color += diffuse * (1.0 - m.maskSky) * (1.0 - m.maskWater) * (1.0 - m.metallic) * (1.0 - m.metal);
+    //color = LinearToGamma(accumulation);
+    //color = LinearToGamma(texture(colortex4, coord).rgb);
+
+    //color = saturate(worldNormal);
+
+    vec3 noTonemapping = GammaToLinear(color * MappingToSDR);
+
+    color /= color + 1.0;
+    color = GammaToLinear(color);
+
+    gl_FragData[0] = vec4(noTonemapping, 1.0);
+    gl_FragData[1] = vec4(color, 1.0);
+    gl_FragData[2] = vec4(accumulation, mix(depth, accumulationDepth, blend));
 }
-/* DRAWBUFFERS:45 */
+/* DRAWBUFFERS:235 */
