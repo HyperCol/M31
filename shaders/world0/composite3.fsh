@@ -61,7 +61,7 @@ vec3 CalculateRSMGI(in Gbuffers m, in Vector v) {
     //shadowSampleCoord = shadowSampleCoord * 0.5 + 0.5;
 
     shadowCoord = shadowCoord * 0.5 + 0.5;
-    shadowCoord.z -= shadowTexelSize * 2.0;
+    //shadowCoord.z -= shadowTexelSize * 2.0;
 
     vec2 fragCoord = texcoord * resolution * 0.375;
 
@@ -99,8 +99,8 @@ vec3 CalculateRSMGI(in Gbuffers m, in Vector v) {
         if(depth > 0.9999 || abs(coord.x / shadowMapScale.x - 0.5) > 0.5 || abs(coord.y / shadowMapScale.y - 0.5) > 0.5) continue;
 
         vec3 albedo = LinearToGamma(texture(shadowcolor0, coord).rgb);
-             albedo /= mix(1.0, maxComponent(albedo), 0.5);
-             albedo = saturation(albedo, 0.5);
+             albedo /= mix(1.0, maxComponent(albedo) + 1e-5, RSMGI_Albedo_Luminance_Boost);
+             albedo = saturation(albedo, RSMGI_Albedo_Saturation);
 
         vec3 normal = texture(shadowcolor1, coord).xyz * 2.0 - 1.0;
              normal = mat3(shadowModelView) * normal;
@@ -108,16 +108,21 @@ vec3 CalculateRSMGI(in Gbuffers m, in Vector v) {
         vec3 halfPosition = vec3(shadowCoord.xy + offset, depth) * 2.0 - 1.0;
              halfPosition = mat3(shadowProjectionInverse) * halfPosition - shadowViewPosition;
 
+        #ifdef RSMGI_Noodle_Error_Disabled
+        if(sqrt(halfPosition.z * halfPosition.z) > length(halfPosition.xy) * RSMGI_Noodle_Error_Distance) continue;
+        #endif
+
         vec3 direction = normalize(halfPosition);
 
-        if(sqrt(halfPosition.z * halfPosition.z) > length(halfPosition.xy) * 1.0) continue;
-
         float ndotl = max(0.0, dot(-direction, normal)) * max(0.0, dot(direction, shadowViewNormal));
-              ndotl *= max(0.0, dot(shadowViewLight, normal));
+
+        #ifdef RSMGI_Disabled_Sun_Angle
+        ndotl *= max(0.0, dot(shadowViewLight, normal));
+        #endif
 
         float attenuation = 1.0 / max(1e-5, pow2(length(halfPosition)));
 
-        diffuse += albedo * min(1.0, ndotl * attenuation * 256.0);
+        diffuse += albedo * min(1.0, ndotl * attenuation * RSMGI_Luminance);
         weight += 1.0;
         }
     }

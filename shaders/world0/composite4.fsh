@@ -168,7 +168,7 @@ void main() {
     float blocker = length(accumulationSamplePosition);
     float penumbra = abs(length(vP) - blocker) / blocker;
 
-    blend *= 1.0 - min(1.0, penumbra * 2.0 * max(1.0, ndoth / max(1e-5, ndotv)));
+    blend *= 1.0 - min(1.0, penumbra * RSMGI_Temporal_Blend * max(1.0, ndoth / max(1e-5, ndotv)));
 
     vec3 previousColor = texture(colortex5, previousCoord).rgb;
 
@@ -178,10 +178,11 @@ void main() {
 
     vec3 color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
 
-    vec3 diffuse = LinearToGamma(accumulation) * LightingColor * m.albedo / 3.14159265;
+    vec3 diffuse = LinearToGamma(accumulation) * LightingColor * m.albedo * invPi;
     color += diffuse * (1.0 - m.maskSky) * (1.0 - m.maskWater) * (1.0 - m.metallic) * (1.0 - m.metal);
     //color = LinearToGamma(accumulation);
     //color = LinearToGamma(texture(colortex4, coord).rgb);
+    //color = texcoord.x > 0.5 ? LinearToGamma(accumulation) : LinearToGamma(currentColor);
 
     //color = saturate(worldNormal);
 
