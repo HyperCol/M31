@@ -1,5 +1,7 @@
 #version 130
 
+#define Atmospheric_Rendering_Scale 0.375
+
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
 
@@ -72,7 +74,7 @@ float R2Dither(in vec2 coord){
     float a1 = 1.0 / 0.75487766624669276;
     float a2 = 1.0 / 0.569840290998;
 
-    return t(mod(coord.x * a1 + coord.y * a2, 1.0));
+    return t(fract(coord.x * a1 + coord.y * a2));
 }
 
 #include "/libs/noise.glsl"
@@ -184,8 +186,8 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
     
     float rayLength = v.viewLength * Altitude_Scale;
 
-    float dither = R2Dither(ApplyTAAJitter(texcoord - jitter) * resolution * 0.5);
-    float dither2 = R2Dither(ApplyTAAJitter(1.0 - texcoord - jitter) * resolution * 0.5);
+    float dither = R2Dither(ApplyTAAJitter(texcoord * Atmospheric_Rendering_Scale - jitter) * resolution);
+    float dither2 = R2Dither(ApplyTAAJitter((1.0 - texcoord) * Atmospheric_Rendering_Scale - jitter) * resolution);
 
     //vec2 tracingBarrel = IntersectNearClouds(vec3(0.0, origin.y, 0.0), direction, vec3(0.0, planet_radius + clouds_height, 0.0), vec3(0.0, planet_radius + clouds_height + clouds_thickness, 0.0), 8000.0);
     //float barrel = tracingBarrel.x > 0.0 ? tracingBarrel.x : max(0.0, tracingBarrel.y);
@@ -326,7 +328,7 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
 }
 
 void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmittance, in Vector v, in float tracingEnd, bool hitSphere) {
-    int steps = 12;
+    int steps = 24;
     float invsteps = 1.0 / float(steps);
 
     vec3 direction = v.worldViewDirection;
@@ -372,7 +374,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
 
     float stepLength = (end - start) * invsteps;
 
-    float dither = R2Dither((ApplyTAAJitter(texcoord) - jitter) * resolution * 0.5);
+    float dither = R2Dither((texcoord * Atmospheric_Rendering_Scale - jitter) * resolution);
 
     vec3 scattering = vec3(0.0);
     vec3 transmittance = vec3(1.0);
@@ -416,7 +418,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
         float Dfog = exp(-height / Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Fog_Exponential_Fog_Bottom) * exp(-rayLength * Fog_Reduce_Density_Far) * Fog_Density;
         float Dweather = exp(-height / Rain_Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Rain_Fog_Exponential_Fog_Bottom) * exp(-rayLength * Rain_Fog_Reduce_Density_Far) * Rain_Fog_Density;
 
-        vec3 Tfog = fog_scattering * mix(Dfog * timeFog, Dweather, rainStrength);
+        vec3 Tfog = fog_scattering * mix(Dfog * timeFog, Dweather, rainStrength) * 10.0;
 
         vec3 extinction = Tm + Tr + Tfog;
 
