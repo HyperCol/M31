@@ -1,5 +1,5 @@
 const float     clouds_height       = 1500.0;
-const float     clouds_thickness    = 800.0;
+const float     clouds_thickness    = 1200.0;
 
 const vec3      clouds_scattering   = vec3(0.08);
 
@@ -19,9 +19,48 @@ vec2 TracingCloudsLayer(in vec3 origin, in vec3 direction) {
     return vec2(start, end);
 }
 
+float PerlinNoise2(in vec2 coord) {
+    return (noise(coord) + noise(coord * 2.0) * 0.5) / 1.5;
+}
+
+float PerlinNoise2(in vec3 coord) {
+    return (noise(coord) + noise(coord * 2.0) * 0.5) / 1.5;
+}
+
 float GetCloudsMap(in vec3 position, in float height) {
     vec3 worldPosition = vec3(position.x, position.z, position.y - planet_radius);
 
+    #if 1
+    
+    float shapeSize = 0.0008;
+
+    vec3 shapeCoord = worldPosition * shapeSize;
+    float shape = PerlinNoise2(shapeCoord.xy);
+    
+    float weight = 1.0;
+    float e = 1200.0 * shapeSize;
+
+    shape += PerlinNoise2(shapeCoord.xy + vec2(e, 0.0)) * weight;
+    shape += PerlinNoise2(shapeCoord.xy - vec2(e, 0.0)) * weight;
+    shape += PerlinNoise2(shapeCoord.xy + vec2(0.0, e)) * weight;
+    shape += PerlinNoise2(shapeCoord.xy - vec2(0.0, e)) * weight;
+    shape /= 1.0 + weight * 4.0;
+
+    shape = saturate(rescale(shape, 0.35, 0.8));
+    
+/*
+    vec2 shapeCoord = worldPosition.xy * 0.0004;
+    float shape = (noise(shapeCoord) + noise(shapeCoord * 2.0) * 0.5) / 1.5;
+          //shape = (noise(shapeCoord * 0.5) + noise(shapeCoord * 0.25) * 0.5) / 1.5;//mix(shape, (noise(shapeCoord * 0.5) + noise(shapeCoord * 0.25) * 0.5) / 1.5, 0.3);
+          shape = rescale(shape, 0.0, 1.0);
+*/
+    vec3 detailCoord = worldPosition * 0.0064;
+
+    float detail = (noise(detailCoord) + noise(detailCoord * 2.0) * 0.5 + noise(detailCoord * 4.0) * 0.25) / 1.75;
+    float detailWeight = 0.3;
+
+    float density = (shape + detail * detailWeight) / (1.0 + detailWeight);
+    #else
     float t = (frameTimeCounter) * Clouds_Speed;
 
     worldPosition.x += t * Clouds_X_Speed;
@@ -35,6 +74,7 @@ float GetCloudsMap(in vec3 position, in float height) {
     float shape2 = (noise(shapeCoord * 4.0) + noise(shapeCoord * 8.0) * 0.5) / 1.5;
 
     float density = max(0.0, rescale(mix(shape, shape2, 0.3), 0.1, 1.0));
+    #endif
 
     return density;
 }
@@ -48,11 +88,12 @@ float GetCloudsMapDetail(in vec3 position, in float shape, in float distortion) 
     vec3 noiseCoord0 = worldPosition * 0.01;
     float noise0 = (noise(noiseCoord0) + noise(noiseCoord0 * 2.0) * 0.5 + noise(noiseCoord0 * 4.0) * 0.25) / (1.75);
 
-    return saturate(rescale(shape - noise0 * distortion, 0.0, 1.0 - distortion));
+    return shape;//saturate(rescale(shape - noise0 * distortion, 0.0, 1.0 - distortion));
 } 
 
 float GetCloudsCoverage(in float linearHeight) { 
-    return pow(mix(0.7, 0.3, rainStrength), remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.3)) * saturate(rescale(linearHeight, -0.01, 0.01)));
+    //return pow(/*mix(0.7, 0.3, rainStrength)*/0.35, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.4)) * saturate(rescale(linearHeight, -0.01, 0.01)));
+    return pow(0.7, remap(linearHeight, 0.7, 0.8, 1.0, mix(1.0, 0.5, 0.4)) * saturate(rescale(linearHeight, -0.01, 0.01)));
 }
 
 float CalculateCloudsCoverage(in float height, in float clouds) {

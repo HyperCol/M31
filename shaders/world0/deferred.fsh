@@ -1,5 +1,7 @@
 #version 130
 
+#define NonJitter
+
 #include "/libs/setting.glsl"
 #include "/libs/uniform.glsl"
 

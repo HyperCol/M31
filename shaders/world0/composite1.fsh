@@ -1,6 +1,6 @@
 #version 130
 
-#define Atmospheric_Rendering_Scale 0.375
+#define Atmospheric_Rendering_Scale 0.375               //[0.375 0.5 0.7]
 
 uniform sampler2D colortex8;
 uniform sampler2D colortex9;

@@ -149,7 +149,11 @@ Vector GetVector(in vec2 coord, in float depthtex) {
     v.depth = depthtex;
     v.linearDepth = ExpToLinerDepth(v.depth);
 
+    #ifdef NonJitter
+    v.vP = nvec3(gbufferProjectionInverse * nvec4(vec3(coord, v.depth) * 2.0 - 1.0));
+    #else
     v.vP = nvec3(gbufferProjectionInverse * nvec4(vec3(ApplyTAAJitter(coord), v.depth) * 2.0 - 1.0));
+    #endif
 
     v.viewLength = length(v.vP);
 

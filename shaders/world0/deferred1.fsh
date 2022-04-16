@@ -30,25 +30,32 @@ float R2Dither(in vec2 coord){
 
 #include "/libs/lighting/shadowmap.glsl"
 
-void CalculatePlanetSurface(inout vec3 color, in vec3 LightColor0, in vec3 LightColor1, in vec3 L, in vec3 direction, in float h, in float t) {
+void CalculatePlanetSurface(inout vec3 color, in vec3 sunColor, in vec3 moonColor, in vec3 L, in vec3 direction, in float h, in float t) {
     if(t <= 0.0) return;
 
     float cosTheta = dot(L, direction);
 
-    vec2 phaseMie = vec2(HG(cosTheta, 0.76), HG(-cosTheta, 0.76));
+    float phaseMieSun = HG(cosTheta, 0.76);
+    float phaseMieMoon = HG(-cosTheta, 0.76);
     float phaseRayleigh = (3.0 / 16.0 / Pi) * (1.0 + cosTheta * cosTheta);
 
-    float Hr = exp(-h / rayleigh_distribution) * float(Near_Atmosphere_Density) * 4.0;
-    float Hm = exp(-h / mie_distribution) * float(Near_Atmosphere_Density) * 4.0;
+    float Hr = exp(-h / rayleigh_distribution) * float(Near_Atmosphere_Density);
+    float Hm = exp(-h / mie_distribution) * float(Near_Atmosphere_Density);
 
     vec3 Tr = Hr * (rayleigh_absorption + rayleigh_scattering);
     vec3 Tm = Hm * (mie_absorption + mie_scattering);
 
-    float stepLength = min(40000.0, sqrt(pow2(t) + pow2(h)));
-    vec3 transmittance = pow(exp(-stepLength * (Tr + Tm) * 0.25), vec3(0.8)) * stepLength;
+    float stepLength = t;
+    vec3 transmittance = exp(-stepLength * (Tr + Tm) * 0.125);
 
-    color = LightColor0 * transmittance * (phaseMie.x * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering) * invPi;
-    color += LightColor1 * transmittance * (phaseMie.y * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering) * invPi;
+    vec3 sunLight = sunColor * (phaseMieSun * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
+    vec3 moonLight = moonColor * (phaseMieMoon * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering);
+
+    color = (sunLight + moonLight) / (sum3(Tr + Tm) * Pi);
+    //color = mix((sunLight + moonLight) / (Tr + Tm), color, transmittance);
+
+    //color = LightColor0 * transmittance * (phaseMie.x * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering) * invPi;
+    //color += LightColor1 * transmittance * (phaseMie.y * Hm * mie_scattering + phaseRayleigh * Hr * rayleigh_scattering) * invPi;
 }
 
 float ComputeAO(in vec3 P, in vec3 N, in vec3 S) {
@@ -70,7 +77,7 @@ float ScreenSpaceAmbientOcclusion(in Gbuffers m, in Vector v) {
 #if SSAO_Quality == OFF
     return 1.0;
 #else
-    vec2 coord = texcoord * 0.5;
+    vec2 coord = texcoord * 0.375;
 
     float ao = 0.0;
     float totalWeight = 0.0;
@@ -269,17 +276,19 @@ void main() {
     vec3 AmbientLight = (SkyLighting + SunGlowLighting) * m.albedo * invPi;
          AmbientLight *= skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
 
+    vec3 cloudsSkyOcclusion = vec3(1.0);
+
     #if Clouds_Sky_Occlusion_Quality > OFF
         #if Clouds_Sky_Occlusion_Quality < High
-        AmbientLight *= CloudsShadow(v0.wP, worldUpVector, origin, vec2(Clouds_Sky_Occlusion_Tracing_Bottom, Clouds_Sky_Occlusion_Tracing_Top), Clouds_Sky_Occlusion_Transmittance, Clouds_Sky_Occlusion_Quality);
+        cloudsSkyOcclusion = CloudsShadow(v0.wP * Altitude_Scale, worldUpVector, origin, vec2(Clouds_Sky_Occlusion_Tracing_Bottom, Clouds_Sky_Occlusion_Tracing_Top), Clouds_Sky_Occlusion_Transmittance, Clouds_Sky_Occlusion_Quality);
         #else
-        AmbientLight *= CloudsShadowRayMarching(v0.wP, worldUpVector, origin, vec2(Clouds_Sky_Occlusion_Tracing_Bottom, Clouds_Sky_Occlusion_Tracing_Top), Clouds_Sky_Occlusion_Transmittance, Clouds_Sky_Occlusion_Quality);
+        cloudsSkyOcclusion = CloudsShadowRayMarching(v0.wP * Altitude_Scale, worldUpVector, origin, vec2(Clouds_Sky_Occlusion_Tracing_Bottom, Clouds_Sky_Occlusion_Tracing_Top), Clouds_Sky_Occlusion_Transmittance, Clouds_Sky_Occlusion_Quality);
         #endif
     #else
-        AmbientLight *= mix(1.0, 0.5, rainStrength);
+        cloudsSkyOcclusion = vec3(mix(1.0, 0.5, rainStrength));
     #endif
 
-    color += AmbientLight * skyLightExtinction;
+    color += AmbientLight * skyLightExtinction * cloudsSkyOcclusion;
 
     vec3 handHeldLight = m.albedo * invPi * BlockLightingColor * (float(heldBlockLightValue) + float(heldBlockLightValue2)) / 15.0;
 
@@ -328,6 +337,9 @@ void main() {
 
     color += emissiveColor;
     
+    //color = cloudsShadow * SunLightingColor + cloudsSkyOcclusion * SkyLightingColor;
+    //color *= 0.25 * invPi;
+
     if(m.tile_mask == Mask_ID_Sky) {
         vec3 rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * Altitude_Scale), 0.0);
         vec3 rayDirection = v0.worldViewDirection;
@@ -338,7 +350,7 @@ void main() {
         color = vec3(0.0);
 
         float ndotl = dot(worldSunVector, rayDirection);
-        color += step(tracingPlanet.x, 0.0) * step(0.9995, ndotl) * mix(1.0 / 21.0, 1.0, saturate(rescale(ndotl, 0.9995, 1.0))) * HG(0.95, 0.76) * Sun_Light_Luminance * 8.0;
+        color += step(tracingPlanet.x, 0.0) * step(0.9995, ndotl) * mix(1.0 / 21.0, 1.0, saturate(rescale(ndotl, 0.9995, 1.0))) * HG(0.95, 0.76) * Sun_Light_Luminance * 32.0;
 
         DrawStars(color, v0.worldViewDirection, starsFade, tracingPlanet.x);
         DrawMoon(color, worldMoonVector, v0.worldViewDirection, tracingPlanet.x);
@@ -349,7 +361,7 @@ void main() {
         float penmubra = (tracingSun.x > 0.0 ? 1.0 : exp(-tracingSun.y * 0.00001)) + (tracingMoon.x > 0.0 ? 1.0 : exp(-tracingMoon.y * 0.00001));
         //color += vec3(1.0) * invPi * step(0.0, tracingPlanet.x) * penmubra;
 
-        vec2 halfcoord = min(texcoord * 0.5 + texelSize, vec2(0.5) - texelSize);
+        vec2 halfcoord = min(texcoord * 0.375, vec2(0.375) - texelSize);
 
         vec3 atmosphere_transmittance = texture(colortex4, halfcoord).rgb;
         vec3 atmosphere_color = texture(colortex3, halfcoord).rgb;

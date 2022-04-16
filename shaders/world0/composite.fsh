@@ -1,6 +1,6 @@
 #version 130
 
-#define Atmospheric_Rendering_Scale 0.375
+#define Atmospheric_Rendering_Scale 0.375               //[0.375 0.5 0.7]
 
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
@@ -224,7 +224,7 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
 
     vec3 MoonLight = MoonColor * moonPhase;
 
-    const int steps = 12;
+    const int steps = 16;
     const float invsteps = 1.0 / float(steps);
 
     if(bottom > top) {
@@ -418,7 +418,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
         float Dfog = exp(-height / Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Fog_Exponential_Fog_Bottom) * exp(-rayLength * Fog_Reduce_Density_Far) * Fog_Density;
         float Dweather = exp(-height / Rain_Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Rain_Fog_Exponential_Fog_Bottom) * exp(-rayLength * Rain_Fog_Reduce_Density_Far) * Rain_Fog_Density;
 
-        vec3 Tfog = fog_scattering * mix(Dfog * timeFog, Dweather, rainStrength) * 10.0;
+        vec3 Tfog = fog_scattering * mix(Dfog * timeFog, Dweather, rainStrength) * 1.0;
 
         vec3 extinction = Tm + Tr + Tfog;
 
