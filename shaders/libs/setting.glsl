@@ -28,11 +28,11 @@
 #define Nature_Light_Min_Luminance 0.1
 
 #define RSMGI_Luminance 256.0                       //[128.0 192.0 256.0 384.0 512.0]
-#define RSMGI_Albedo_Luminance_Boost 0.5            //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-#define RSMGI_Albedo_Saturation 0.9                 //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.55 1.6 1.65 1.7 1.75 1.8]
+#define RSMGI_Albedo_Luminance_Boost 0.75            //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
+#define RSMGI_Albedo_Saturation 0.8                 //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.55 1.6 1.65 1.7 1.75 1.8]
 #define RSMGI_Temporal_Blend 4.0
-//#define RSMGI_Noodle_Error_Disabled
-    #define RSMGI_Noodle_Error_Distance 1.0         //[1.0 1.5 2.0 2.5]
+#define RSMGI_Noodle_Error_Disabled
+    #define RSMGI_Noodle_Error_Distance 2.0         //[1.0 1.5 2.0 2.5]
 //#define RSMGI_Disabled_Sun_Angle
 
 //Blocks Light

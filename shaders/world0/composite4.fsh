@@ -1,5 +1,7 @@
 #version 130
 
+#extension GL_ARB_gpu_shader5 : enable
+
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
 uniform sampler2D colortex5;
@@ -89,11 +91,14 @@ void main() {
 
     vec3 closest = vec3(0.0, 0.0, 1000.0);
 
+    float neighborWeight = 1.0;
+
     for(float i = -2.0; i <= 2.0; i += 1.0) {
         for(float j = -2.0; j <= 2.0; j += 1.0) {
             vec2 sampleCoord = coord + vec2(i, j) * texelSize;
 
             float sampleLinear = ExpToLinerDepth(texture(colortex4, sampleCoord).a);
+
             float difference = abs(sampleLinear - linearDepth);
             float weight = 1.0 - min(1.0, difference * 16.0);
 
@@ -183,8 +188,6 @@ void main() {
     //color = LinearToGamma(accumulation);
     //color = LinearToGamma(texture(colortex4, coord).rgb);
     //color = texcoord.x > 0.5 ? LinearToGamma(accumulation) : LinearToGamma(currentColor);
-
-    //color = saturate(worldNormal);
 
     vec3 noTonemapping = GammaToLinear(color * MappingToSDR);
 

@@ -96,7 +96,9 @@ vec3 CalculateRSMGI(in Gbuffers m, in Vector v) {
 
         float depth = texture(shadowtex0, coord).x;
               depth = (depth * 2.0 - 1.0) / Shadow_Depth_Mul * 0.5 + 0.5;
+              
         if(depth > 0.9999 || abs(coord.x / shadowMapScale.x - 0.5) > 0.5 || abs(coord.y / shadowMapScale.y - 0.5) > 0.5) continue;
+        //depth -= 0.00;
 
         vec3 albedo = LinearToGamma(texture(shadowcolor0, coord).rgb);
              albedo /= mix(1.0, maxComponent(albedo) + 1e-5, RSMGI_Albedo_Luminance_Boost);
@@ -127,10 +129,10 @@ vec3 CalculateRSMGI(in Gbuffers m, in Vector v) {
         }
     }
 
-    if(weight > 0.0)
-    diffuse /= weight;
+    //if(weight > 0.0)
+    //diffuse /= weight;
 
-    //diffuse *= invsteps;
+    diffuse /= 4.0 * 6.0;
 
     return diffuse;
 }
