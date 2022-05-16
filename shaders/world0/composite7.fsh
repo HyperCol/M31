@@ -168,7 +168,9 @@ void main() {
     vec3 v = YCoCgToRGB(variance);
 
     float velocityWeight = step(0.05, velocityLength) * 0.08;
-    float depthWeight = 0.2 * min(1.0, abs(ExpToLinerDepth(texture(depthtex0, texcoord).x) - ExpToLinerDepth(texture(depthtex0, previousCoord).x)));
+
+    float blocker = ExpToLinerDepth(texture(depthtex0, previousCoord).x);
+    float depthWeight = min(0.2, abs(ExpToLinerDepth(texture(depthtex0, texcoord).x) - blocker) / blocker * 16.0);
 
     blend -= max(depthWeight, velocityWeight);
 

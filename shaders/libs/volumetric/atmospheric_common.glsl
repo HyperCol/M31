@@ -47,6 +47,9 @@
     const vec3 fog_scattering = vec3(0.001);
     const vec3 fog_absorption = vec3(0.0);
 
+    const float biomeRainfall = 0.8;
+    const float biomeTemperature = 0.7;
+
     #define Reduce_Fog_Indoor_Density
     #define Reduce_Fog_Bottom_Density
 

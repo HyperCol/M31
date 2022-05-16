@@ -1009,13 +1009,22 @@ void main() {
         #ifdef Reduce_Fog_Indoor_Density
             float indoorDensity = max(m.maskSky, max(float(eyeBrightness.y) / 240.0, m.lightmap.y));
             
-            transmittance = mix(vec3(1.0), transmittance, vec3(indoorDensity));
-            scattering = mix(vec3(0.0), scattering, vec3(indoorDensity));
+            //transmittance = mix(vec3(1.0), transmittance, vec3(indoorDensity));
+            //scattering = mix(vec3(0.0), scattering, vec3(indoorDensity));
         #endif
+
+        //color = vec3(0.0);
 
         color *= transmittance;
         color += scattering;
+
+        //color = vec3(texture(colortex9, coord).a);
     }
+
+    //float hg = max(HG(dot(sunVector, v0.viewDirection), 0.2) * 3.0, HG(dot(sunVector, v0.viewDirection), 0.8));
+
+    //color = vec3(hg);
+    //if(hg >= 1.0) color = vec3(1.0, 0.0, 0.0);
 
     //color *= texture(colortex10, texcoord * 0.5).rgb;
     //color += texture(colortex9, texcoord * 0.5).rgb;

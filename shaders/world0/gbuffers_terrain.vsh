@@ -53,7 +53,6 @@ void main() {
     tangent = normalize(gl_NormalMatrix * at_tangent.xyz);
     binormal = normalize(cross(tangent, normal) * at_tangent.w);
 
-
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
     lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
     midcoord = mc_midTexCoord.xy;

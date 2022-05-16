@@ -7,7 +7,7 @@ const int colortex2Format = RGBA16;
 const int colortex3Format = RGBA16;
 const int colortex4Format = RGBA32F;
 const int colortex5Format = RGBA32F;
-const int colortex6Format = RGBA16;
+const int colortex6Format = RGBA32F;
 const int colortex7Format = RGBA16;
 
 const int colortex8Format = RG32F;
@@ -180,7 +180,7 @@ void main() {
 
     color = Uncharted2Tonemap(color);
     //color /= Uncharted2Tonemap(vec3(9.0));
-	color = saturation(color, 1.26);
+	color = saturation(color, 1.2);
     //color = ACESToneMapping(color);
 
     color = GammaToLinear(color);

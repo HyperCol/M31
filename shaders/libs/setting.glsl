@@ -34,6 +34,7 @@
 #define RSMGI_Noodle_Error_Disabled
     #define RSMGI_Noodle_Error_Distance 2.0         //[1.0 1.5 2.0 2.5]
 //#define RSMGI_Disabled_Sun_Angle
+#define RSMGI_Render_Scale 0.5
 
 //Blocks Light
 #define Held_Light_Quality Medium                   //[Medium High]

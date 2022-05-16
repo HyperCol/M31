@@ -327,8 +327,10 @@ void CalculateClouds(inout vec3 outScattering, inout vec3 outTransmittance, in V
     //}
 }
 
+//vec3 FogScattering()
+
 void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmittance, in Vector v, in float tracingEnd, bool hitSphere) {
-    int steps = 24;
+    int steps = 16;
     float invsteps = 1.0 / float(steps);
 
     vec3 direction = v.worldViewDirection;
@@ -350,7 +352,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
     float phaseMieMoon = HG(-theta, 0.76);
     vec3 mieMoonLight = vec3(moonLuminance * phaseMieMoon);
 
-    float fogSunLight = lightHG * Sun_Light_Luminance * mix(HG(theta, -0.1), HG(theta, 0.7), 0.4);
+    float fogSunLight = sunLuminance * max(HG(theta, 0.2) * 4.0, HG(theta, 0.7));
     float fogAmbientLight = (sunLuminance + moonLuminance) * HG(abs(worldSunVector.y), 0.76);
 
     float phaseRayleigh2 = (3.0 / 16.0 / Pi) * (1.0 + worldSunVector.y * worldSunVector.y);
@@ -369,8 +371,11 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
     //float start = 0.0;
     //float end = min(8000.0, tracingEnd);
 
-    float start = max(0.0, tracingEnd - 8000.0);
-    float end = tracingEnd;
+    //float start = max(0.0, tracingEnd - 8000.0);
+    //float end = tracingEnd;
+
+    float start = 0.0;
+    float end = min(tracingEnd, 512.0);
 
     float stepLength = (end - start) * invsteps;
 
@@ -380,7 +385,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
     vec3 transmittance = vec3(1.0);
 
     vec3 rayStep = stepLength * direction;
-    vec3 rayStart = vec3(0.0, origin.y, 0.0);
+    vec3 rayStart = origin;
     vec3 testPoint = rayStart + mix(dither, 1.0, 0.05) * rayStep;
 
     for(int i = 0; i < steps; i++) {
@@ -409,16 +414,35 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
         vec3 lightVisibility = vec3(visibility) * cloudsShadow;
         vec3 skylightVisibility = cloudsOccluasion;
 
-        float Dm = exp(-height / mie_distribution);
+        float heightExpFogDensity = exp(-rayLength * 0.001);
+
+        float Dm = exp(-height / mie_distribution) + exp(-height / mie_distribution * 256.0) * 16.0 * heightExpFogDensity;
         vec3 Tm = (mie_absorption + mie_scattering) * Dm;
 
-        float Dr = exp(-height / rayleigh_distribution);
+        float Dr = exp(-height / rayleigh_distribution) + exp(-height / rayleigh_distribution * 256.0) * 16.0 * heightExpFogDensity;
         vec3 Tr = (rayleigh_absorption + rayleigh_scattering) * Dr;
 
-        float Dfog = exp(-height / Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Fog_Exponential_Fog_Bottom) * exp(-rayLength * Fog_Reduce_Density_Far) * Fog_Density;
+        float riverFog = 1.0 - min(1.0, height / 8.0);
+
+        float Dfog = ((biomeRainfall + riverFog * 2.0 * mix(0.5, biomeRainfall, 0.5) * 0.0) * exp(-height / Fog_Exponential_Fog_Vaule)) * exp(-max(0.0, -noclampedHeight) / Fog_Exponential_Fog_Bottom) * heightExpFogDensity * Fog_Density;// * exp(-rayLength * Fog_Reduce_Density_Far) * Fog_Density;
         float Dweather = exp(-height / Rain_Fog_Exponential_Fog_Vaule) * exp(-max(0.0, -noclampedHeight) / Rain_Fog_Exponential_Fog_Bottom) * exp(-rayLength * Rain_Fog_Reduce_Density_Far) * Rain_Fog_Density;
 
-        vec3 Tfog = fog_scattering * mix(Dfog * timeFog, Dweather, rainStrength) * 1.0;
+        vec3 Tfog = fog_scattering * Dfog * biomeRainfall * 0.0;//mix(Dfog * timeFog, Dweather, rainStrength) * 10.0;
+
+        vec2 largeFogCoord = currentPosition.xz * 0.05;
+        float largeFog = (noise(largeFogCoord) + noise(largeFogCoord * 0.5) * 0.5) / 1.5;
+              largeFog = saturate(rescale(largeFog, -0.1, 1.0));
+        Tfog *= largeFog * 10.0;
+
+        vec3 smallFogCoord = currentPosition * 0.5 + vec3(frameTimeCounter * 0.5, 0.0, 0.0);
+        float smallFogDensity = (noise(smallFogCoord) + noise(smallFogCoord * 0.5) * 0.5) / 1.5;
+
+        smallFogCoord = smallFogCoord * 2.0 + vec3(frameTimeCounter * 0.5, frameTimeCounter * 0.5, 0.0) * 2.0;
+        smallFogDensity += (noise(smallFogCoord) + noise(smallFogCoord * 0.5) * 0.5) / 1.5;
+        smallFogDensity *= 0.5;
+        smallFogDensity = mix(1.0, pow(smallFogDensity, 2.0) * 2.0, 0.8);
+
+        //Tfog *= smallFogDensity * 10.0;
 
         vec3 extinction = Tm + Tr + Tfog;
 
@@ -429,7 +453,7 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
 
         vec3 m = Dm * mie_scattering;
         vec3 r = Dr * rayleigh_scattering;
-
+        
         vec3 sunLight = (mieSunLight * lightVisibility + mieSunLight2 * cloudsOccluasion) * m + (rayleighSunLight * lightVisibility + rayleighSunLight2 * cloudsOccluasion) * r;
              sunLight *= sunLightExtinction;
 
@@ -451,8 +475,8 @@ void LandAtmosphericScattering(inout vec3 outScattering, inout vec3 outTransmitt
         float halfHeight = mix(height, 2000.0, 0.5);
         vec3 lightSampleTransmittance = fog_scattering * mix(exp(-halfHeight / Fog_Exponential_Fog_Vaule) * timeFog, exp(-halfHeight / Rain_Fog_Exponential_Fog_Vaule), rainStrength);
 
-        vec3 fogSunLighting = fogSunLight * lightVisibility * CalculateFogLight(tracingFogSun, lightSampleTransmittance);
-        vec3 fogambientLighting = fogAmbientLight * skylightVisibility * CalculateFogLight(tracingFogUp, lightSampleTransmittance);
+        vec3 fogSunLighting = fogSunLight * lightVisibility;// * CalculateFogLight(tracingFogSun, lightSampleTransmittance);
+        vec3 fogambientLighting = fogAmbientLight * skylightVisibility;// * CalculateFogLight(tracingFogUp, lightSampleTransmittance);
 
         S += Tfog * sunLightExtinction * (fogSunLighting + fogambientLighting);
 

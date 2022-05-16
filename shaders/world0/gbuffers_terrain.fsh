@@ -320,7 +320,6 @@ void main() {
         lightmap = clamp(lightmap - (-depth) * occlusion, vec2(0.0), vec2(1.0));
     }
     
-    //albedo.rgb = vec3(saturate(handness * 0.5 + 0.5));
     //if(albedo.a < Alpha_Test_Reference) discard;
 
     //Misc: heightmap self_shadow

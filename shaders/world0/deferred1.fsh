@@ -139,25 +139,35 @@ float ScreenSpaceContactShadow(in Gbuffers m, in Vector v, in vec3 LightDirectio
     if(ndotl < 0.02 || material_bias > 0.0) return 1.0;
 
     float dist = ExpToLinerDepth(v.depth);
-    float distanceStepLength = clamp((dist - shadowDistance * 0.5) / 2.0, 1.0, 16.0);
+    float distanceStepLength = clamp((dist - shadowDistance * 0.25) / 2.0, 1.0, 16.0);
 
-    vec3 bias = m.geometryNormal / dot(LightDirection, m.geometryNormal) * dist / 500.0;
+    vec3 bias = m.geometryNormal * (abs(LightDirection.z) * 50.0 + v.linearDepth) / 700.0;
+
+    #ifdef MC_RENDER_QUALITY
+    bias /= MC_RENDER_QUALITY;
+    #endif
 
     float dither = R2Dither(ApplyTAAJitter(texcoord) * vec2(viewWidth, viewHeight));
 
     float maxLength = 0.2 * distanceStepLength;
     float thickness = 0.1 * distanceStepLength;
 
-    vec3 direction = LightDirection * invsteps * maxLength;
-    vec3 position = v.vP + direction * dither + bias;
+    vec3 direction = (LightDirection) * invsteps * maxLength;
+    vec3 rayStart = v.vP;
+    vec3 position = rayStart + direction * dither + bias;
 
     for(int i = 0; i < steps; i++) {
-        vec3 sampleCoord = nvec3(gbufferProjection * nvec4(position)) * 0.5 + 0.5;
-        if(abs(sampleCoord.x - 0.5) > 0.5 || abs(sampleCoord.y - 0.5) > 0.5) break;
+        vec3 coord = nvec3(gbufferProjection * nvec4(position)) * 0.5 + 0.5;
+        if(abs(coord.x - 0.5) > 0.5 || abs(coord.y - 0.5) > 0.5) break;
 
-        float testDepth = texture(depthtex0, sampleCoord.xy).x;
+        float sampleDepth = texture(depthtex0, coord.xy).x;
 
-        if(sampleCoord.z > testDepth && ExpToLinerDepth(testDepth) + thickness > ExpToLinerDepth(sampleCoord.z)) {
+        float linearRay = ExpToLinerDepth(coord.z);
+        float linearSample = ExpToLinerDepth(sampleDepth);
+
+        float delta = linearRay - linearSample;
+
+        if(delta > 0.0 && delta < thickness) {
             shading = 0.0;
             break;
         }
@@ -207,10 +217,10 @@ void main() {
 
     float simplesss = m.fullBlock < 0.5 && m.material > 65.0 ? 1.0 : 0.0;
 
-    float contactShadow = ScreenSpaceContactShadow(m, v0, lightVector, simplesss) * m.selfShadow;
+    float screenSpaceShadow = m.maskHand > 0.5 ? 1.0 : ScreenSpaceContactShadow(m, v0, lightVector, simplesss) * m.selfShadow;
 
     vec3 shading = CalculateShading(vec3(texcoord, v0.depth), lightVector, m.geometryNormal, simplesss * 2.0);
-         shading *= contactShadow;
+         shading *= screenSpaceShadow;
 
     vec3 sunLightShading = DiffuseLighting(m, lightVector, v0.eyeDirection);
     
@@ -257,24 +267,26 @@ void main() {
     vec3 weatherLighting = SunLightingColor * Tfog * tracingFogSun * sunLightExtinction;
 
     vec3 weatherLighting2 = sunLight * weatherLighting * mix(HG(0.8, -0.1), HG(0.8, 0.7), 0.4);
-    color += weatherLighting2 * skylightMap;
+    //color += weatherLighting2 * skylightMap;
 
     vec3 weatherLighting1 = invPi * m.albedo * weatherLighting * mix(HG(abs(worldSunVector.y), -0.1), HG(abs(worldSunVector.y), 0.7), 0.4);
-    color += weatherLighting1 * skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
+    //color += weatherLighting1 * skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
 
     vec3 AmbientLightColor = SkyLightingColor;
 
-    vec3 SkyLighting = AmbientLightColor * rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0);
+    //vec3 SkyLighting = AmbientLightColor * rescale(dot(m.texturedNormal, upVector) * 0.5 + 0.5, -0.5, 1.0);
 
-    float t1 = dot(m.texturedNormal, sunVector);
-    float t2 = -t1;
+    float ndotl = dot(m.texturedNormal, sunVector);
+    float nndotl = -ndotl;
 
-    vec3 SunGlowLighting = SunLightingColor * saturate(min(0.02, rescale(t1, -0.5, 1.0)) * HG(t1, 0.76)) + MoonLightingColor * saturate(min(0.02, rescale(t2, -0.5, 1.0)) * HG(t2, 0.76));
-         SunGlowLighting *= cloudsShadow;
-         SunGlowLighting *= contactShadow;
+    float lightLuminance = min(1.0, HG(0.95, 0.76));
 
-    vec3 AmbientLight = (SkyLighting + SunGlowLighting) * m.albedo * invPi;
-         AmbientLight *= skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
+    //vec3 SunGlowLighting = SunLightingColor * HG(ndotl, 0.76) * saturate(ndotl + 0.5) + MoonLightingColor * HG(nndotl, 0.76) * saturate(nndotl + 0.5);
+    //     SunGlowLighting *= cloudsShadow;
+    //     SunGlowLighting *= screenSpaceShadow * lightLuminance * 0.01;
+
+    //vec3 AmbientLight = (SkyLighting + SunGlowLighting) * m.albedo * invPi;
+    //     AmbientLight *= skylightMap * (1.0 - m.metal) * (1.0 - m.metallic);
 
     vec3 cloudsSkyOcclusion = vec3(1.0);
 
@@ -288,7 +300,13 @@ void main() {
         cloudsSkyOcclusion = vec3(mix(1.0, 0.5, rainStrength));
     #endif
 
-    color += AmbientLight * skyLightExtinction * cloudsSkyOcclusion;
+    //color += AmbientLight * skyLightExtinction * cloudsSkyOcclusion;
+
+    vec3 msLighting = SunLightingColor * HG(ndotl, 0.76) + MoonLightingColor * HG(nndotl, 0.76);
+
+    vec3 AmbientLight = AmbientLightColor + msLighting / 21.0;//HG(0.5, 0.76);
+
+    color += AmbientLight * m.albedo * invPi * skylightMap * saturate(rescale(dot(m.texturedNormal, upVector), -1.5, 1.0));
 
     vec3 handHeldLight = m.albedo * invPi * BlockLightingColor * (float(heldBlockLightValue) + float(heldBlockLightValue2)) / 15.0;
 
@@ -339,6 +357,7 @@ void main() {
     
     //color = cloudsShadow * SunLightingColor + cloudsSkyOcclusion * SkyLightingColor;
     //color *= 0.25 * invPi;
+    //color = vec3(screenSpaceShadow);
 
     if(m.tile_mask == Mask_ID_Sky) {
         vec3 rayOrigin = vec3(0.0, planet_radius + max(1.0, (cameraPosition.y - 63.0) * Altitude_Scale), 0.0);

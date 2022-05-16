@@ -63,14 +63,14 @@ void main() {
 
             float sampleDepth = ExpToLinerDepth(texture(colortex8, coord).y);
                   //sampleDepth = (sampleDepth + ExpToLinerDepth(texture(colortex8, coord + vec2(texelSize.x, 0.0)).y) + ExpToLinerDepth(texture(colortex8, coord + vec2(0.0, texelSize.y)).y)) / 3.0;
-/*
+
             float weight = 1.0;
             sampleDepth += ExpToLinerDepth(texture(colortex8, coord + vec2(texelSize.x, 0.0)).y) * weight;
             sampleDepth += ExpToLinerDepth(texture(colortex8, coord - vec2(texelSize.x, 0.0)).y) * weight;
             sampleDepth += ExpToLinerDepth(texture(colortex8, coord + vec2(0.0, texelSize.y)).y) * weight;
             sampleDepth += ExpToLinerDepth(texture(colortex8, coord - vec2(0.0, texelSize.y)).y) * weight;
             sampleDepth /= 1.0 + weight * 4.0;
-*/
+
             float diffcent = abs(sampleDepth - linearDepth);
 
             if(diffcent < closest.z) {
@@ -82,7 +82,7 @@ void main() {
     closest.xy = min(vec2(Atmospheric_Rendering_Scale) - texelSize, halfCoord + closest.xy);
 
     vec3 closest2 = vec3(0.0, 0.0, 10000.0);
-
+/*
     for(float i = -1.0; i <= 1.0; i += 1.0) {
         for(float j = -1.0; j <= 1.0; j += 1.0) {
             vec2 offset = vec2(i, j) * texelSize;
@@ -105,7 +105,7 @@ void main() {
             }
         }
     }
-
+*/
     closest.xy = min(vec2(Atmospheric_Rendering_Scale) - texelSize, closest.xy + closest2.xy);
 
     float rayDepth = texture(colortex8, closest.xy).x;
@@ -134,13 +134,17 @@ void main() {
             float diffcent = abs(ExpToLinerDepth(sampleDepth) - linearDepth);
 
             float weight = 1.0 - min(1.0, diffcent);
-            if(i == 0.0 && j == 0.0) weight = 6.0;
 
             scattering += texture(colortex9, coord).rgb * weight;
             alpha += texture(colortex9, coord).a * weight;
             totalWeight += weight;
         }
     }
+
+    float centerWeight = 8.0;
+    totalWeight += centerWeight;
+    scattering  += texture(colortex9, closest.xy).rgb * centerWeight;
+    alpha       += texture(colortex9, closest.xy).a * centerWeight;
 
     scattering /= totalWeight;
     alpha /= totalWeight;
@@ -159,8 +163,8 @@ void main() {
     //float weight = 1.0 - min(1.0, 0.01 * abs(ExpToLinerDepth(texture(colortex8, texcoord * 0.5 - velocity).y) - linearCloudsDepth));
     //float weight = 1.0 - abs(alpha - previousSample.a);//1.0 - min(1.0, 10000.0 * abs(ExpToLinerDepth(texture(depthtex0, previousCoord - velocity * 3.0).x) - linearDepth));
 
-    float sigma = rayDepth < 0.99999 ? 8.0 : 1.0;
-    float weight = 1.0 - min(1.0, abs(previousLinearDepth - linearCloudsDepth) / linearCloudsDepth * sigma);
+    float sigma = rayDepth < 1.0 ? 512.0 : 1.0;
+    float weight = 1.0 - min(1.0, abs(previousLinearDepth - linearCloudsDepth) / previousLinearDepth * sigma);
 
     vec2 jitterfragCoord = floor(texcoord * resolution) + round(jitter * resolution);
     float update = min(mod(jitterfragCoord.x, 2.0), mod(jitterfragCoord.y, 2.0));
@@ -177,6 +181,6 @@ void main() {
     //gl_FragData[1] = vec4(vec3(saturate((closest.xy - halfCoord) * resolution), 0.0), 0.0);
     gl_FragData[2] = vec4(transmittance, 1.0);
     gl_FragData[3] = result;
-    gl_FragData[4] = vec4(mix(cloudsDepth, previousCloudsDepth, blend), 1.0, 1.0, 1.0);
+    gl_FragData[4] = vec4(cloudsDepth, 1.0, 1.0, 1.0);
 }
 /* RENDERTARGETS: 8,9,10,11,12 */

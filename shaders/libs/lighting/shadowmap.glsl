@@ -1,8 +1,19 @@
+float ShadowTextureGather(in sampler2D tex, in vec2 coord) {
+    float depth0 = texture(tex, coord.xy).x;
+    float depth1 = max(texture(tex, coord.xy + vec2(shadowTexelSize, 0.0)).x, texture(tex, coord.xy - vec2(shadowTexelSize, 0.0)).x);
+    float depth2 = max(texture(tex, coord.xy + vec2(0.0, shadowTexelSize)).x, texture(tex, coord.xy - vec2(0.0, shadowTexelSize)).x);
+
+    return max(depth2, max(depth1, depth0));
+}
+
 vec3 CalculateShadowVisbility(in vec3 coord) {
     if(abs(coord.x / shadowMapScale.x - 0.5) >= 0.5 || abs(coord.y / shadowMapScale.y - 0.5) >= 0.5 || coord.z >= 1.0 - 1e-5) return vec3(1.0);
 
-    float v0 = step(coord.z, texture(shadowtex0, coord.xy).x);
-    float v1 = step(coord.z, texture(shadowtex1, coord.xy).x);
+    float d0 = ShadowTextureGather(shadowtex0, coord.xy);
+    float d1 = ShadowTextureGather(shadowtex1, coord.xy);
+
+    float v0 = step(coord.z, d0);
+    float v1 = step(coord.z, d1);
 
     vec3 albedo = LinearToGamma(texture(shadowcolor0, coord.xy).rgb);
     float alpha = max(0.0, texture(shadowcolor0, coord.xy).a - 0.2) / 0.8;
@@ -68,7 +79,7 @@ vec3 CalculateShading(in vec3 coord, in vec3 lightDirection, in vec3 normal, in 
 
     for(int i = 0; i < steps; i++) {
         float a = (float(i) + dither) * (sqrt(5.0) - 1.0) * Pi;
-        float r = pow(float(i + 1) * invsteps, 0.75);
+        float r = pow(float(i + 1) * invsteps, 0.99);
         vec2 offset = vec2(cos(a) * r, sin(a) * r) * TexelBlurRadius * 4.0;
 
         float depth1 = texture(shadowtex1, shadowCoord.xy + offset).x;

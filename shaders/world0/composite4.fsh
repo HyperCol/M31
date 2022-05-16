@@ -81,7 +81,7 @@ void main() {
     vec3 b = cross(t, normal);
     mat3 tbn = mat3(t, b, normal);
 
-    vec2 coord = clamp(texcoord * 0.375, texelSize * 3.0, 0.375 - texelSize * 3.0);
+    vec2 coord = clamp(texcoord * RSMGI_Render_Scale, texelSize * 3.0, RSMGI_Render_Scale - texelSize * 3.0);
     
     vec3 centerColor = texture(colortex4, coord).rgb;
     vec3 currentColor = vec3(0.0);
@@ -148,7 +148,7 @@ void main() {
     vec2 bounceCoord = ScreenSpaceBounce(vP, normalize(tbn * direction));
 
     if(bounceCoord.x > 0.0 && bounceCoord.y > 0.0) {
-        currentColor += GammaToLinear(LinearToGamma(currentColor) + LinearToGamma(texture(colortex4, bounceCoord * 0.375).rgb));
+        currentColor += GammaToLinear(LinearToGamma(currentColor) + LinearToGamma(texture(colortex4, bounceCoord * RSMGI_Render_Scale).rgb));
     }
     #endif
 
@@ -162,6 +162,9 @@ void main() {
           blend *= step(abs(previousCoord.x - 0.5), 0.5) * step(abs(previousCoord.y - 0.5), 0.5);
 
     float accumulationDepth = texture(colortex5, previousCoord).a;
+    //bool emptyFrame = accumulationDepth == 0.0;
+          //accumulationDepth = emptyFrame ? 1.0 : accumulationDepth;
+
     float accumulationLinear = ExpToLinerDepth(accumulationDepth);
     vec3 previousSampleCoord = vec3(previousCoord, texture(depthtex0, previousCoord).x);
     vec3 previousSamplePosition = nvec3(gbufferProjectionInverse * nvec4(previousSampleCoord * 2.0 - 1.0));
@@ -183,7 +186,7 @@ void main() {
 
     vec3 color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
 
-    vec3 diffuse = LinearToGamma(accumulation) * LightingColor * m.albedo * invPi;
+    vec3 diffuse = LinearToGamma(accumulation) * LightingColor * m.albedo * invPi * 1.0;
     color += diffuse * (1.0 - m.maskSky) * (1.0 - m.maskWater) * (1.0 - m.metallic) * (1.0 - m.metal);
     //color = LinearToGamma(accumulation);
     //color = LinearToGamma(texture(colortex4, coord).rgb);
@@ -195,7 +198,7 @@ void main() {
     color = GammaToLinear(color);
 
     gl_FragData[0] = vec4(noTonemapping, 1.0);
-    gl_FragData[1] = vec4(color, 1.0);
-    gl_FragData[2] = vec4(accumulation, mix(depth, accumulationDepth, blend));
+    //gl_FragData[1] = vec4(color, 1.0);
+    gl_FragData[1] = vec4(accumulation, depth);
 }
-/* DRAWBUFFERS:235 */
+/* DRAWBUFFERS:35 */
